@@ -11,6 +11,9 @@ node_modules
 dist
 .env
 dist-ssr
+test-results
+playwright-report
+.local/
 *.local
 
 # Editor directories and files
