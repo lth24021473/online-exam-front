@@ -3,7 +3,7 @@ import { useAuth } from '../auth/useAuth'
 import { getAuthDestination } from './authRedirect'
 
 export function GuestRoute() {
-  const { loading, isAuthenticated } = useAuth()
+  const { loading, isAuthenticated, user } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -14,7 +14,7 @@ export function GuestRoute() {
       </div>
     )
   }
-  if (isAuthenticated) return <Navigate to={getAuthDestination(location.state)} replace />
+  if (isAuthenticated) return <Navigate to={getAuthDestination(location.state, user?.role)} replace />
   return <Outlet />
 }
 

@@ -29,6 +29,11 @@ export function setAccessToken(token: string | null): void {
   }
 }
 
+export function expireSession(message = 'Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.'): void {
+  setAccessToken(null)
+  window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT, { detail: { message } }))
+}
+
 const baseURL = import.meta.env.VITE_API_URL?.trim().replace(/\/+$/, '') || 'http://localhost:3000/api/v1'
 
 export const api = axios.create({
@@ -54,8 +59,7 @@ api.interceptors.response.use(
       const token = getAccessToken()
       const isAuthForm = /\/auth\/(login|register)\/?$/.test(error.config?.url ?? '')
       if (token && authorization === `Bearer ${token}` && !isAuthForm) {
-        setAccessToken(null)
-        window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+        expireSession(getApiErrorMessage(error))
       }
     }
     return Promise.reject(error)
@@ -69,6 +73,7 @@ const errorTranslations: Record<string, string> = {
   'Token has been revoked': 'Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.',
   'Bearer token is required': 'Vui lòng đăng nhập để tiếp tục.',
   'Account no longer exists': 'Tài khoản không còn tồn tại.',
+  'Account permissions have changed. Please sign in again': 'Quyền tài khoản đã thay đổi. Vui lòng đăng nhập lại.',
   'email must be an email': 'Vui lòng nhập địa chỉ email hợp lệ.',
   'password must be longer than or equal to 6 characters': 'Mật khẩu cần có ít nhất 6 ký tự.',
   'password must be shorter than or equal to 72 bytes': 'Mật khẩu không được vượt quá 72 byte.',

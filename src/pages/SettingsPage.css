@@ -1,0 +1,33 @@
+.settings-page { width: 100%; max-width: 920px; margin-inline: auto; min-width: 0; }
+.settings-page > header p { margin: 0; color: var(--text-muted); }
+.settings-page .account-card { min-width: 0; padding: 28px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); }
+.settings-page .account-settings-card { width: 100%; }
+.settings-page .account-card h2 { margin: 0 0 12px; font-size: 23px; line-height: 1.3; font-weight: 700; }
+.settings-page .account-card-description { margin: 0; color: var(--text-muted); line-height: 1.65; font-size: 15px; }
+.settings-page .account-settings-section { padding: 26px 0 0; margin-top: 24px; border-top: 1px solid var(--border); }
+.settings-page .account-settings-section h3 { margin: 0 0 20px; font-size: 18px; font-weight: 600; }
+.settings-page .account-theme-setting { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); }
+.settings-page .account-theme-icon { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; background: var(--surface-highlight); color: var(--accent); }
+.settings-page .account-theme-copy { flex: 1; min-width: 0; }
+.settings-page .account-theme-copy > p { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.5; }
+.settings-page .account-theme-switch { position: relative; flex-shrink: 0; width: 56px; height: 32px; padding: 3px; border: 1px solid #667187; border-radius: 99px; background: #667187; transition: background 160ms, border-color 160ms; }
+.settings-page .account-theme-switch-thumb { display: block; width: 24px; height: 24px; border-radius: 50%; background: white; transform: translateX(0); transition: transform 160ms; }
+.settings-page .account-theme-switch[aria-checked='true'] { border-color: #0b63ff; background: #0b63ff; }
+.settings-page .account-theme-switch[aria-checked='true'] .account-theme-switch-thumb { transform: translateX(24px); }
+.settings-page .account-settings-email { margin: 0 0 18px; color: var(--text-muted); overflow-wrap: anywhere; }
+.settings-page .settings-logout { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 11px 16px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-muted); color: var(--text-primary); font-size: 14px; font-weight: 600; line-height: 1.4; }
+.settings-page .settings-logout > svg { flex-shrink: 0; }
+.settings-page .settings-logout:hover { background: var(--surface-hover); }
+.settings-page .settings-logout:disabled { opacity: .65; }
+@media (max-width: 600px) {
+  .settings-page .account-card { padding: 23px 20px; }
+  .settings-page .account-card h2 { font-size: 21px; }
+  .settings-page .account-theme-setting { gap: 12px; padding: 16px 12px; }
+  .settings-page .account-theme-icon { width: 36px; height: 36px; border-radius: 10px; }
+  .settings-page .account-theme-copy > p { font-size: 15px; }
+}
+@media (max-width: 360px) {
+  .settings-page .account-theme-setting { gap: 10px; }
+  .settings-page .account-theme-icon { width: 30px; height: 30px; }
+  .settings-page .account-theme-copy > p { font-size: 14px; }
+}

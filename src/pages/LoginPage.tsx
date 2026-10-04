@@ -12,7 +12,7 @@ import { getAuthDestination } from '../router/authRedirect'
 export default function LoginPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const { authenticate } = useAuth()
+  const { authenticate, sessionNotice } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [registrationNotice] = useAutoDismissNotice(location.state?.registrationSuccess === true
@@ -31,7 +31,7 @@ export default function LoginPage() {
         password: String(data.get('password')),
       })
       authenticate(response)
-      navigate(getAuthDestination(location.state), { replace: true })
+      navigate(getAuthDestination(location.state, response.user.role), { replace: true })
     } catch (cause) {
       setError(getApiErrorMessage(cause))
     } finally {
@@ -47,6 +47,7 @@ export default function LoginPage() {
           <span>{registrationNotice}</span>
         </p>
       )}
+      {sessionNotice && <p className="form-error" role="alert">{sessionNotice}</p>}
       <form className="auth-form" onSubmit={handleSubmit} aria-busy={submitting}>
         <fieldset disabled={submitting}>
           <label className="sr-only" htmlFor="email">Địa chỉ email</label>

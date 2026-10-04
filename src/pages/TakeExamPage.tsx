@@ -1,21 +1,49 @@
-import { useEffect, useRef, useState } from 'react'
-import { AlertCircle, ArrowLeft, CheckCircle2, Clock3, CloudUpload, LoaderCircle, Send, WifiOff, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { AlertCircle, ArrowLeft, CheckCircle2, Clock3, CloudUpload, Flag, LoaderCircle, Send, WifiOff, X } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useExamAttempt } from '../attempts/useExamAttempt'
 
 function formatRemaining(milliseconds: number) {
   const seconds = Math.max(0, Math.ceil(milliseconds / 1000))
-  const minutes = Math.floor(seconds / 60)
-  return `${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+function readReviewMarks(key: string | null): string[] {
+  if (!key) return []
+  try {
+    const marks: unknown = JSON.parse(sessionStorage.getItem(key) ?? '[]')
+    return Array.isArray(marks) ? marks.filter((id): id is string => typeof id === 'string') : []
+  } catch {
+    return []
+  }
 }
 
 function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }) {
   const { state, controller } = useExamAttempt(userId, examId)
   const navigate = useNavigate()
   const [questionIndex, setQuestionIndex] = useState(0)
+  const [reviewOverrides, setReviewOverrides] = useState<Record<string, string[]>>({})
   const dialogRef = useRef<HTMLElement>(null)
   const dialogTriggerRef = useRef<HTMLElement | null>(null)
+  const reviewStorageKey = state.session ? `online-exam.review:${userId}:${state.session.attempt.id}` : null
+  const storedReviewMarks = useMemo(() => readReviewMarks(reviewStorageKey), [reviewStorageKey])
+  const reviewMarks = reviewStorageKey ? reviewOverrides[reviewStorageKey] ?? storedReviewMarks : []
+
+  const toggleReview = (questionId: string) => {
+    if (!reviewStorageKey) return
+    const next = reviewMarks.includes(questionId)
+      ? reviewMarks.filter((id) => id !== questionId)
+      : [...reviewMarks, questionId]
+    setReviewOverrides((marks) => ({ ...marks, [reviewStorageKey]: next }))
+    try {
+      sessionStorage.setItem(reviewStorageKey, JSON.stringify(next))
+    } catch {
+      // Review marks remain usable even when temporary browser storage is unavailable.
+    }
+  }
 
   useEffect(() => {
     if (state.completedId) navigate(`/attempts/${state.completedId}/result`, { replace: true })
@@ -68,7 +96,6 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
       <Link className="exam-back" to={`/exams/${examId}`}><ArrowLeft size={17} aria-hidden="true" /> Chi tiết đề thi</Link>
       <section className="exam-panel exam-taking-header">
         <div className="exam-heading"><span className="exam-eyebrow">{session.resumed ? 'Tiếp tục lượt thi' : 'Bài thi của bạn'}</span><h1>{session.exam.title}</h1><p className="exam-muted">{session.exam.durationMinutes} phút · {session.attempt.totalQuestions} câu hỏi</p></div>
-        <div className={`exam-timer${remaining <= 60_000 ? ' exam-timer-urgent' : ''}`}><Clock3 size={22} aria-hidden="true" /><div><span>Thời gian còn lại</span><time aria-label="Thời gian còn lại" dateTime={`PT${Math.max(0, Math.ceil(remaining / 1000))}S`}>{formatRemaining(remaining)}</time></div></div>
       </section>
       {!state.online && <div className="exam-alert exam-alert-warning" role="status"><WifiOff size={20} aria-hidden="true" /><span>{expired || state.submissionPending ? 'Mất kết nối. Bài sẽ được kiểm tra và nộp khi kết nối trở lại.' : 'Mất kết nối. Bạn vẫn có thể chọn đáp án; bài sẽ tự lưu khi kết nối trở lại.'}</span></div>}
       {!state.cacheAvailable && state.pendingCount > 0 && <div className="exam-alert exam-alert-warning" role="status">Thiết bị không cho phép lưu tạm đáp án. Hãy giữ trang này mở cho đến khi đáp án được lưu.</div>}
@@ -78,7 +105,13 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
       <div className="exam-workspace">
         <section className="exam-panel exam-question" aria-labelledby="current-question-title">
           {current ? <>
-            <div className="exam-question-top"><span className="exam-eyebrow">Câu {Math.min(questionIndex + 1, questions.length)} / {questions.length}</span><span className={`exam-question-save exam-save-${state.saveStatuses[current.id] ?? 'saved'}`} role="status">{state.selections[current.id] === undefined ? 'Chưa chọn đáp án' : state.saveStatuses[current.id] === 'saved' ? 'Đã lưu' : state.saveStatuses[current.id] === 'saving' ? 'Đang lưu…' : state.saveStatuses[current.id] === 'error' ? 'Lưu lỗi' : 'Chờ lưu'}</span></div>
+            <div className="exam-question-top">
+              <span className="exam-eyebrow">Câu {Math.min(questionIndex + 1, questions.length)} / {questions.length}</span>
+              <div className="exam-question-tools">
+                <span className={`exam-question-save exam-save-${state.saveStatuses[current.id] ?? 'saved'}`} role="status">{state.selections[current.id] === undefined ? 'Chưa chọn đáp án' : state.saveStatuses[current.id] === 'saved' ? 'Đã lưu' : state.saveStatuses[current.id] === 'saving' ? 'Đang lưu…' : state.saveStatuses[current.id] === 'error' ? 'Lưu lỗi' : 'Chờ lưu'}</span>
+                <button type="button" className={`exam-review-toggle${reviewMarks.includes(current.id) ? ' is-marked' : ''}`} aria-pressed={reviewMarks.includes(current.id)} disabled={locked} onClick={() => toggleReview(current.id)}><Flag size={15} aria-hidden="true" />Đánh dấu xem lại</button>
+              </div>
+            </div>
             <fieldset className="exam-options" disabled={locked}>
               <legend id="current-question-title">Câu {Math.min(questionIndex + 1, questions.length)}. {current.content}</legend>
               {current.options.map((option, index) => <label key={`${current.id}:${index}`} className={`exam-option${state.selections[current.id] === index ? ' exam-option-selected' : ''}`}><input type="radio" name={`question-${current.id}`} value={index} checked={state.selections[current.id] === index} onChange={() => controller.select(current.id, index)} /><span className="exam-option-letter" aria-hidden="true">{String.fromCharCode(65 + index)}</span><span><span className="sr-only">{String.fromCharCode(65 + index)}. </span>{option}</span></label>)}
@@ -87,15 +120,28 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
           </> : <p>Đề thi chưa có câu hỏi.</p>}
         </section>
         <aside className="exam-panel exam-attempt-sidebar" aria-label="Tiến độ làm bài">
-          <h2>Tiến độ làm bài</h2><p className="exam-muted">Đã chọn {answeredCount}/{questions.length} câu</p>
-          <progress className="exam-progress" value={answeredCount} max={Math.max(1, questions.length)} aria-label="Số câu đã chọn" />
-          <nav className="exam-question-nav" aria-label="Chọn câu hỏi">{questions.map((question, index) => <button key={question.id} className={`${index === questionIndex ? 'is-current ' : ''}${state.selections[question.id] !== undefined ? 'is-answered' : ''}`} aria-label={`Câu ${index + 1}${state.selections[question.id] !== undefined ? ', đã chọn' : ', chưa chọn'}`} aria-current={index === questionIndex ? 'step' : undefined} onClick={() => setQuestionIndex(index)}>{index + 1}</button>)}</nav>
-          <p className="exam-save-summary" role="status">{saving ? <CloudUpload size={18} aria-hidden="true" /> : state.pendingCount ? <AlertCircle size={18} aria-hidden="true" /> : <CheckCircle2 size={18} aria-hidden="true" />}{saveText}</p>
-          {(saveErrors || (state.pendingCount > 0 && !saving)) && !expired && !state.submissionPending && <button className="exam-text-button" onClick={controller.retrySave} disabled={Boolean(state.busy)}>Thử lưu lại</button>}
-          {state.pendingCount > 0 && <p className="exam-muted exam-small">Đáp án chưa lưu được giữ tạm trên thiết bị này. Khi hết giờ, bài được chấm theo đáp án máy chủ đã nhận.</p>}
-          <div className="exam-submit-actions">
+          <h2 className="sr-only">Tiến độ làm bài</h2>
+          <div className="exam-attempt-summary">
+            <div className="exam-summary-stat"><span>Số câu đã làm</span><strong aria-label={`Đã chọn ${answeredCount}/${questions.length} câu`}>{answeredCount}<span>/{questions.length}</span></strong></div>
+            <div className={`exam-summary-stat exam-sidebar-timer${remaining <= 60_000 ? ' exam-timer-urgent' : ''}`}><span>Thời gian còn lại</span><time aria-label="Thời gian còn lại" dateTime={`PT${Math.max(0, Math.ceil(remaining / 1000))}S`}>{formatRemaining(remaining)}</time></div>
+          </div>
+          <progress className="sr-only" value={answeredCount} max={Math.max(1, questions.length)} aria-label="Số câu đã chọn" />
+          <div className="exam-question-nav-scroll">
+            <nav className="exam-question-nav" aria-label="Chọn câu hỏi">{questions.map((question, index) => <button key={question.id} className={[index === questionIndex ? 'is-current' : '', state.selections[question.id] !== undefined ? 'is-answered' : '', reviewMarks.includes(question.id) ? 'is-review' : ''].filter(Boolean).join(' ')} aria-label={`Câu ${index + 1}${state.selections[question.id] !== undefined ? ', đã chọn' : ', chưa chọn'}${reviewMarks.includes(question.id) ? ', cần kiểm tra lại' : ''}`} aria-current={index === questionIndex ? 'step' : undefined} onClick={() => setQuestionIndex(index)}>{index + 1}</button>)}</nav>
+          </div>
+          <div className="exam-sidebar-submit">
             {state.submissionPending || expired ? <button className="button button-primary button-inline" onClick={controller.retrySubmit} disabled={Boolean(state.busy)}>{state.busy === 'submit' ? 'Đang nộp bài…' : 'Kiểm tra và nộp lại'}</button> : <button className="button button-primary button-inline" onClick={(event) => { dialogTriggerRef.current = event.currentTarget; controller.openSubmit() }} disabled={Boolean(state.busy)}><Send size={17} aria-hidden="true" /> Nộp bài</button>}
-            <button className="button button-inline exam-button-secondary" onClick={(event) => { dialogTriggerRef.current = event.currentTarget; controller.openCancel() }} disabled={locked}><X size={17} aria-hidden="true" /> Hủy bài</button>
+          </div>
+          <ul className="exam-question-legend" aria-label="Trạng thái câu hỏi">
+            <li><span className="exam-legend-dot is-answered" aria-hidden="true" />Câu đã làm</li>
+            <li><span className="exam-legend-dot" aria-hidden="true" />Câu chưa làm</li>
+            <li><span className="exam-legend-dot is-review" aria-hidden="true" />Câu cần kiểm tra lại</li>
+          </ul>
+          <div className="exam-sidebar-footer">
+            <p className="exam-save-summary" role="status">{saving ? <CloudUpload size={18} aria-hidden="true" /> : state.pendingCount ? <AlertCircle size={18} aria-hidden="true" /> : <CheckCircle2 size={18} aria-hidden="true" />}{saveText}</p>
+            {(saveErrors || (state.pendingCount > 0 && !saving)) && !expired && !state.submissionPending && <button className="exam-text-button" onClick={controller.retrySave} disabled={Boolean(state.busy)}>Thử lưu lại</button>}
+            {state.pendingCount > 0 && <p className="exam-muted exam-small">Đáp án chưa lưu được giữ tạm trên thiết bị này. Khi hết giờ, bài được chấm theo đáp án máy chủ đã nhận.</p>}
+            <button className="exam-cancel-action" onClick={(event) => { dialogTriggerRef.current = event.currentTarget; controller.openCancel() }} disabled={locked}><X size={16} aria-hidden="true" /> Hủy bài</button>
           </div>
         </aside>
       </div>
