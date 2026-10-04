@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import axios from 'axios'
 import { authApi } from '../api/auth.api'
 import type { AuthResponse, AuthUser } from '../api/auth.api'
-import { ACCESS_TOKEN_KEY, getAccessToken, SESSION_EXPIRED_EVENT, setAccessToken } from '../api/axios'
+import { ACCESS_TOKEN_KEY, getAccessToken, getApiErrorMessage, SESSION_EXPIRED_EVENT, setAccessToken } from '../api/axios'
 import { AuthContext } from './auth-context'
 
 interface Session {
@@ -19,8 +19,11 @@ function initialSession(): Session {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session>(initialSession)
+  const [restoreError, setRestoreError] = useState('')
+  const [retry, setRetry] = useState(0)
 
   const clearSession = useCallback(() => {
+    setRestoreError('')
     setAccessToken(null)
     setSession({ token: null, user: null, loading: false })
   }, [])
@@ -35,19 +38,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession({ token, user, loading: false })
     }).catch((error: unknown) => {
       if (controller.signal.aborted || axios.isCancel(error)) return
-      if (getAccessToken() === token) clearSession()
+      if (getAccessToken() !== token) return
+      if (axios.isAxiosError(error) && [401, 403].includes(error.response?.status ?? 0)) clearSession()
+      else setRestoreError(getApiErrorMessage(error))
     })
 
     return () => controller.abort()
-  }, [session.token, session.loading, clearSession])
+  }, [session.token, session.loading, clearSession, retry])
 
   useEffect(() => {
     const onExpired = () => {
+      setRestoreError('')
       setSession({ token: null, user: null, loading: false })
     }
     const onStorage = (event: StorageEvent) => {
       if (event.key !== ACCESS_TOKEN_KEY && event.key !== null) return
       const token = getAccessToken()
+      setRestoreError('')
       setSession((current) => current.token === token
         ? current
         : { token, user: null, loading: Boolean(token) })
@@ -61,7 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  useEffect(() => {
+    const reconnect = () => { setRestoreError(''); setRetry((value) => value + 1) }
+    window.addEventListener('online', reconnect)
+    return () => window.removeEventListener('online', reconnect)
+  }, [])
+
   const authenticate = useCallback((response: AuthResponse) => {
+    setRestoreError('')
     setAccessToken(response.accessToken)
     setSession({ token: response.accessToken, user: response.user, loading: false })
   }, [])
@@ -85,7 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
   }), [session.user, session.loading, authenticate, logout])
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={value}>{session.token && session.loading && restoreError
+    ? <div className="route-loading"><section className="exam-panel"><h1>Chưa thể kiểm tra phiên đăng nhập</h1><p className="form-error" role="alert">{restoreError}</p><p>Kết nối lại để tiếp tục bài làm. Thời gian làm bài vẫn tiếp tục chạy.</p><div className="exam-actions"><button className="button button-primary button-inline" onClick={() => { setRestoreError(''); setRetry((value) => value + 1) }}>Thử lại kết nối</button><button className="button button-inline exam-button-secondary" onClick={clearSession}>Về đăng nhập</button></div></section></div>
+    : children}</AuthContext.Provider>
 }
 
 export default AuthProvider

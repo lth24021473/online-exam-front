@@ -4,6 +4,7 @@ import { AccountProfileProvider } from './profile/AccountProfileProvider'
 import AppRouter from './router/AppRouter'
 import { ThemeProvider } from './theme/ThemeProvider'
 import './App.css'
+import './Exams.css'
 
 export default function App() {
   return (

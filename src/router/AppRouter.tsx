@@ -9,6 +9,12 @@ import ProfilePage from '../pages/ProfilePage'
 import NotFoundPage from '../pages/NotFoundPage'
 import GuestRoute from './GuestRoute'
 import ProtectedRoute from './ProtectedRoute'
+import StudentRoute from './StudentRoute'
+import ExamsPage from '../pages/ExamsPage'
+import ExamDetailPage from '../pages/ExamDetailPage'
+import TakeExamPage from '../pages/TakeExamPage'
+import AttemptResultPage from '../pages/AttemptResultPage'
+import AttemptHistoryPage from '../pages/AttemptHistoryPage'
 
 export default function AppRouter() {
   return (
@@ -25,6 +31,13 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="exams" element={<ExamsPage />} />
+          <Route path="exams/:examId" element={<ExamDetailPage />} />
+          <Route element={<StudentRoute />}>
+            <Route path="exams/:examId/take" element={<TakeExamPage />} />
+            <Route path="history" element={<AttemptHistoryPage />} />
+            <Route path="attempts/:attemptId/result" element={<AttemptResultPage />} />
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />

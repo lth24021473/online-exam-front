@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { House, LogOut, UserRound } from 'lucide-react'
+import { BookOpen, History, House, LogOut, UserRound } from 'lucide-react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import Brand from '../components/Brand'
 import { useAuth } from '../auth/useAuth'
@@ -22,6 +22,8 @@ export default function AppLayout() {
         <Brand to="/dashboard" />
         <nav className="app-nav" aria-label="Điều hướng chính">
           <NavLink to="/dashboard"><House size={18} aria-hidden="true" /> Trang chủ</NavLink>
+          <NavLink to="/exams"><BookOpen size={18} aria-hidden="true" /> Đề thi</NavLink>
+          {user?.role === 'STUDENT' && <NavLink to="/history"><History size={18} aria-hidden="true" /> Lịch sử</NavLink>}
           <NavLink to="/profile"><UserRound size={18} aria-hidden="true" /> Tài khoản</NavLink>
         </nav>
         <button className="logout-button" type="button" disabled={signingOut} onClick={handleLogout}>
