@@ -44,7 +44,6 @@
 .account-feedback > svg { flex-shrink: 0; margin-top: 1px; }
 .account-feedback-error { color: var(--error-text); border-color: var(--error-border); background: var(--error-background); }
 .account-feedback-success { color: var(--success-text); border-color: var(--success-border); background: var(--success-background); }
-.account-settings-card { max-width: 920px; }
 .account-edit-card { max-width: 920px; }
 .account-edit-form { margin-top: 28px; }
 .account-edit-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
@@ -64,23 +63,12 @@
 .account-avatar-preview .account-avatar-initials { font-size: 80px; }
 .account-cover-preview { height: 136px; overflow: hidden; border-radius: 10px; background: var(--surface-highlight); }
 .account-cover-preview img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 40%; }
-.account-settings-section { padding: 26px 0 0; margin-top: 24px; border-top: 1px solid var(--border); }
-.account-settings-section h3 { margin: 0 0 20px; font-size: 18px; font-weight: 600; }
-.account-theme-setting { display: flex; align-items: center; gap: 16px; padding: 18px 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); }
-.account-theme-icon { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 12px; background: var(--surface-highlight); color: var(--accent); }
-.account-theme-copy { flex: 1; min-width: 0; }
-.account-theme-copy > p { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.5; }
-.account-theme-switch { position: relative; flex-shrink: 0; width: 56px; height: 32px; padding: 3px; border: 1px solid #667187; border-radius: 99px; background: #667187; transition: background 160ms, border-color 160ms; }
-.account-theme-switch-thumb { display: block; width: 24px; height: 24px; border-radius: 50%; background: white; transform: translateX(0); transition: transform 160ms; }
-.account-theme-switch[aria-checked='true'] { border-color: #0b63ff; background: #0b63ff; }
-.account-theme-switch[aria-checked='true'] .account-theme-switch-thumb { transform: translateX(24px); }
 .account-settings-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 17px; }
 .account-action-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 9px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-muted); color: var(--text-primary); font-size: 14px; font-weight: 600; line-height: 1.3; }
 .account-action-button:hover { background: var(--surface-hover); }
 .account-action-primary { border-color: #0b63ff; background: #0b63ff; color: white; }
 .account-action-primary:hover { background: #0756e5; }
 .account-action-button:disabled { opacity: .65; }
-.account-settings-email { margin: 0 0 18px; color: var(--text-muted); overflow-wrap: anywhere; }
 
 @media (max-width: 900px) {
   .account-cover { height: 220px; }
@@ -111,9 +99,6 @@
   .account-empty-state { padding: 35px 0; }
   .account-edit-fields { grid-template-columns: 1fr; gap: 18px; }
   .account-edit-actions .account-action-button { flex: 1 0 140px; }
-  .account-theme-setting { gap: 12px; padding: 16px 12px; }
-  .account-theme-icon { width: 36px; height: 36px; border-radius: 10px; }
-  .account-theme-copy > p { font-size: 15px; }
   .account-avatar-preview { width: min(200px, 100%); }
   .account-avatar-preview .account-avatar-initials { font-size: 66px; }
 }

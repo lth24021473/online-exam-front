@@ -20,10 +20,12 @@ function initialSession(): Session {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session>(initialSession)
   const [restoreError, setRestoreError] = useState('')
+  const [sessionNotice, setSessionNotice] = useState('')
   const [retry, setRetry] = useState(0)
 
   const clearSession = useCallback(() => {
     setRestoreError('')
+    setSessionNotice('')
     setAccessToken(null)
     setSession({ token: null, user: null, loading: false })
   }, [])
@@ -47,7 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session.token, session.loading, clearSession, retry])
 
   useEffect(() => {
-    const onExpired = () => {
+    const onExpired = (event: Event) => {
+      const message = (event as CustomEvent<{ message?: string }>).detail?.message
+      setSessionNotice(typeof message === 'string' ? message : 'Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.')
       setRestoreError('')
       setSession({ token: null, user: null, loading: false })
     }
@@ -55,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event.key !== ACCESS_TOKEN_KEY && event.key !== null) return
       const token = getAccessToken()
       setRestoreError('')
+      setSessionNotice('')
       setSession((current) => current.token === token
         ? current
         : { token, user: null, loading: Boolean(token) })
@@ -76,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const authenticate = useCallback((response: AuthResponse) => {
     setRestoreError('')
+    setSessionNotice('')
     setAccessToken(response.accessToken)
     setSession({ token: response.accessToken, user: response.user, loading: false })
   }, [])
@@ -95,9 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: session.user,
     loading: session.loading,
     isAuthenticated: Boolean(session.user),
+    sessionNotice,
     authenticate,
     logout,
-  }), [session.user, session.loading, authenticate, logout])
+  }), [session.user, session.loading, sessionNotice, authenticate, logout])
 
   return <AuthContext.Provider value={value}>{session.token && session.loading && restoreError
     ? <div className="route-loading"><section className="exam-panel"><h1>Chưa thể kiểm tra phiên đăng nhập</h1><p className="form-error" role="alert">{restoreError}</p><p>Kết nối lại để tiếp tục bài làm. Thời gian làm bài vẫn tiếp tục chạy.</p><div className="exam-actions"><button className="button button-primary button-inline" onClick={() => { setRestoreError(''); setRetry((value) => value + 1) }}>Thử lại kết nối</button><button className="button button-inline exam-button-secondary" onClick={clearSession}>Về đăng nhập</button></div></section></div>

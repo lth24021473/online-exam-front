@@ -1,10 +1,12 @@
 import api from './axios'
 
+export type AuthRole = 'STUDENT' | 'EXAM_MANAGER' | 'ADMIN'
+
 export interface AuthUser {
   id: string
   email: string
   fullName: string
-  role: 'STUDENT' | 'EXAM_MANAGER'
+  role: AuthRole
   createdAt: string
   updatedAt: string
 }

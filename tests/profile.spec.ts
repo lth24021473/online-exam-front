@@ -47,6 +47,9 @@ const test = base.extend<{ api: ProfileApi }>({
       if (key === 'GET /users/me') {
         expect(request.headers().authorization).toBe(`Bearer ${token}`)
         await route.fulfill({ status: 200, json: { ...user, fullName } })
+      } else if (key === 'GET /attempts') {
+        expect(request.headers().authorization).toBe(`Bearer ${token}`)
+        await route.fulfill({ json: { items: [], meta: { page: 1, limit: 6, total: 0, totalPages: 0 } } })
       } else {
         unexpected.push(key)
         await route.fulfill({ status: 501, json: { message: 'Unexpected mocked profile endpoint' } })
@@ -85,17 +88,17 @@ async function expectActiveTabVisible(page: Page) {
   })).toBe(true)
 }
 
-test('profile shows real account details and five tabs with persistent query navigation', async ({ page, api }) => {
+test('profile shows real account details and four tabs with persistent query navigation', async ({ page, api }) => {
   await page.goto('/profile?source=account')
   await expect(page.getByRole('heading', { level: 1, name: user.fullName })).toBeVisible()
-  await expect(page.getByRole('tab')).toHaveText(['Giới thiệu', 'Lớp học', 'Nhiệm vụ', 'Chỉnh sửa tài khoản', 'Cài đặt'])
+  await expect(page.getByRole('tab')).toHaveText(['Giới thiệu', 'Lớp học', 'Nhiệm vụ', 'Chỉnh sửa tài khoản'])
   await expect(page.getByRole('tab', { name: 'Giới thiệu', exact: true })).toHaveAttribute('aria-selected', 'true')
   const details = page.getByRole('tabpanel').locator('dd')
   await expect(details.filter({ hasText: user.email })).toBeVisible()
   await expect(details.filter({ hasText: 'Học viên' })).toBeVisible()
   await expect(details.filter({ hasText: '1/9/2026' })).toBeVisible()
 
-  for (const [label, value] of [['Lớp học', 'classes'], ['Nhiệm vụ', 'tasks'], ['Chỉnh sửa tài khoản', 'edit'], ['Cài đặt', 'settings'], ['Giới thiệu', 'about']]) {
+  for (const [label, value] of [['Lớp học', 'classes'], ['Nhiệm vụ', 'tasks'], ['Chỉnh sửa tài khoản', 'edit'], ['Giới thiệu', 'about']]) {
     await page.getByRole('tab', { name: label, exact: true }).click()
     await expect(page.getByRole('tab', { name: label, exact: true })).toHaveAttribute('aria-selected', 'true')
     expect(new URL(page.url()).searchParams.get('tab')).toBe(value)
@@ -112,7 +115,7 @@ test('profile shows real account details and five tabs with persistent query nav
   await expect(page.getByRole('tab', { name: 'Giới thiệu', exact: true })).toHaveAttribute('aria-selected', 'true')
   await expect(page).toHaveURL('/profile?tab=unknown&source=account')
   expect(api.calls.length).toBeGreaterThan(0)
-  expect(api.calls.every((call) => call === 'GET /users/me')).toBe(true)
+  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call))).toBe(true)
 })
 
 test('tabs support arrow keys, Home, End, focus and roving tabindex', async ({ page }) => {
@@ -121,8 +124,8 @@ test('tabs support arrow keys, Home, End, focus and roving tabindex', async ({ p
   await about.focus()
   for (const [key, label] of [
     ['ArrowRight', 'Lớp học'], ['ArrowRight', 'Nhiệm vụ'], ['ArrowRight', 'Chỉnh sửa tài khoản'],
-    ['ArrowRight', 'Cài đặt'], ['ArrowLeft', 'Chỉnh sửa tài khoản'], ['End', 'Cài đặt'],
-    ['Home', 'Giới thiệu'], ['ArrowLeft', 'Cài đặt'], ['ArrowRight', 'Giới thiệu'],
+    ['ArrowRight', 'Giới thiệu'], ['ArrowLeft', 'Chỉnh sửa tài khoản'], ['End', 'Chỉnh sửa tài khoản'],
+    ['Home', 'Giới thiệu'], ['ArrowLeft', 'Chỉnh sửa tài khoản'], ['ArrowRight', 'Giới thiệu'],
   ]) {
     await page.keyboard.press(key)
     const selected = page.getByRole('tab', { name: label, exact: true })
@@ -130,7 +133,7 @@ test('tabs support arrow keys, Home, End, focus and roving tabindex', async ({ p
     await expect(selected).toHaveAttribute('aria-selected', 'true')
     await expect(selected).toHaveAttribute('tabindex', '0')
     await expect(page.getByRole('tablist').locator('[role="tab"][tabindex="0"]')).toHaveCount(1)
-    await expect(page.getByRole('tablist').locator('[role="tab"][tabindex="-1"]')).toHaveCount(4)
+    await expect(page.getByRole('tablist').locator('[role="tab"][tabindex="-1"]')).toHaveCount(3)
   }
 })
 
@@ -166,7 +169,7 @@ test('saved profile edits update account details and home greeting and persist a
   await expect(fullName).toHaveValue(saved.fullName)
   await expect(workplace).toHaveValue(saved.workplace)
   await expect(currentResidence).toHaveValue(saved.currentResidence)
-  expect(api.calls.every((call) => call === 'GET /users/me')).toBe(true)
+  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call))).toBe(true)
 })
 
 test('account save notices expire after two seconds and repeated saves restart their lifetime', async ({ page }) => {
@@ -298,7 +301,7 @@ test('avatar upload persists locally across reload and can be removed', async ({
   expect(await page.evaluate((key) => localStorage.getItem(key), avatarKey)).toBeNull()
   await page.reload()
   await expect(photo).toHaveCount(0)
-  expect(api.calls.every((call) => call === 'GET /users/me')).toBe(true)
+  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call))).toBe(true)
 })
 
 test('overlapping avatar and cover notices expire independently after two seconds', async ({ page }) => {
@@ -395,7 +398,7 @@ test('cover editor uploads an image that persists independently of the avatar an
   await page.reload()
   await expect(photo).toHaveAttribute('src', defaultCover)
   await expect(page.locator('.account-avatar-shell img')).toHaveAttribute('src', savedAvatar!)
-  expect(api.calls.every((call) => call === 'GET /users/me')).toBe(true)
+  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call))).toBe(true)
 })
 
 test('invalid cover files preserve the saved image and report a cover error', async ({ page }) => {
@@ -439,7 +442,7 @@ test('profile fits 390px and 320px with a long Vietnamese name in every tab', as
     const header = page.locator('.account-profile-header')
     await expect(header.getByRole('button', { name: 'Chỉnh sửa ảnh bìa', exact: true })).toHaveCount(0)
     await expect(header.getByRole('button', { name: 'Xóa ảnh bìa', exact: true })).toHaveCount(0)
-    for (const label of ['Giới thiệu', 'Lớp học', 'Nhiệm vụ', 'Chỉnh sửa tài khoản', 'Cài đặt']) {
+    for (const label of ['Giới thiệu', 'Lớp học', 'Nhiệm vụ', 'Chỉnh sửa tài khoản']) {
       await page.getByRole('tab', { name: label, exact: true }).click()
       await expect(page.getByRole('tabpanel')).toBeVisible()
       if (label === 'Chỉnh sửa tài khoản') {
@@ -454,8 +457,11 @@ test('dark mode works with the keyboard, persists and follows account and home n
   const themeKey = 'online-exam.theme'
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto('/profile?tab=settings')
+  await expect(page).toHaveURL('/settings')
+  await expect(page.getByRole('heading', { level: 1, name: 'Cài đặt', exact: true })).toBeVisible()
+  await expect(page.getByRole('tab')).toHaveCount(0)
   const toggle = page.getByRole('switch', { name: 'Chế độ tối', exact: true })
-  const visibleCard = page.getByRole('tabpanel').locator('.account-card')
+  const visibleCard = page.locator('.account-settings-card')
   await expect(toggle).toBeVisible()
   await expect(toggle).toHaveAttribute('aria-checked', 'false')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
@@ -469,10 +475,10 @@ test('dark mode works with the keyboard, persists and follows account and home n
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(17, 24, 39)')
   await expect(visibleCard).toHaveCSS('background-color', 'rgb(31, 41, 55)')
-  await expect(page.locator('.account-name h1')).toHaveCSS('color', 'rgb(243, 244, 246)')
+  await expect(page.getByRole('heading', { level: 1, name: 'Cài đặt', exact: true })).toHaveCSS('color', 'rgb(243, 244, 246)')
   await expect.poll(() => page.evaluate((key) => localStorage.getItem(key), themeKey)).toBe('dark')
   await expectNoOverflow(page)
-  await capturePreview(page, 'test-results/preview-profile-dark-desktop.png')
+  await capturePreview(page, 'test-results/preview-settings-dark-desktop.png')
 
   await page.reload()
   await expect(toggle).toHaveAttribute('aria-checked', 'true')
@@ -483,7 +489,7 @@ test('dark mode works with the keyboard, persists and follows account and home n
     await expect(toggle).toBeVisible()
     await expectNoOverflow(page)
   }
-  await capturePreview(page, 'test-results/preview-profile-dark-mobile.png')
+  await capturePreview(page, 'test-results/preview-settings-dark-mobile.png')
 
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.getByRole('link', { name: 'Trang chủ', exact: true }).click()
@@ -491,10 +497,12 @@ test('dark mode works with the keyboard, persists and follows account and home n
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(17, 24, 39)')
   await expect(page.locator('.app-header')).toHaveCSS('background-color', 'rgb(31, 41, 55)')
-  await expect(page.locator('.empty-state')).toHaveCSS('background-color', 'rgb(31, 41, 55)')
+  await expect(page.locator('.dashboard-hint')).toHaveCSS('background-color', 'rgb(38, 50, 68)')
   await capturePreview(page, 'test-results/preview-dashboard-dark-desktop.png')
   await page.getByRole('link', { name: 'Tài khoản', exact: true }).click()
-  await page.getByRole('tab', { name: 'Cài đặt', exact: true }).click()
+  await expect(page.getByRole('tab', { name: 'Cài đặt', exact: true })).toHaveCount(0)
+  await expect(page.locator('.account-name h1')).toHaveCSS('color', 'rgb(243, 244, 246)')
+  await page.getByRole('link', { name: 'Cài đặt', exact: true }).click()
   await expect(toggle).toHaveAttribute('aria-checked', 'true')
 
   await toggle.click()
@@ -511,6 +519,9 @@ test('dark mode works with the keyboard, persists and follows account and home n
 test('dark OS preference and invalid saved themes still default to light mode', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.goto('/profile?tab=settings')
+  await expect(page).toHaveURL('/settings')
+  await expect(page.getByRole('heading', { level: 1, name: 'Cài đặt', exact: true })).toBeVisible()
+  await expect(page.getByRole('tab')).toHaveCount(0)
   const toggle = page.getByRole('switch', { name: 'Chế độ tối', exact: true })
   await expect(toggle).toHaveAttribute('aria-checked', 'false')
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
@@ -541,8 +552,11 @@ test('profile desktop and mobile previews are captured', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await expectNoOverflow(page)
   await capturePreview(page, 'test-results/preview-profile-edit-desktop.png')
-  await page.getByRole('tab', { name: 'Cài đặt', exact: true }).click()
+  await page.getByRole('link', { name: 'Cài đặt', exact: true }).click()
+  await expectNoOverflow(page)
+  await capturePreview(page, 'test-results/preview-settings-desktop.png')
   await page.getByRole('switch', { name: 'Chế độ tối', exact: true }).click()
+  await page.getByRole('link', { name: 'Tài khoản', exact: true }).click()
   await page.getByRole('tab', { name: 'Chỉnh sửa tài khoản', exact: true }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await expectNoOverflow(page)

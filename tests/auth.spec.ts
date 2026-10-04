@@ -24,6 +24,7 @@ type ApiMock = {
 const test = base.extend<{ api: ApiMock }>({
   api: [async ({ page }, use) => {
     const handlers = new Map<string, (route: Route) => Promise<void>>()
+    handlers.set('GET /attempts', async (route) => route.fulfill({ json: { items: [], meta: { page: 1, limit: 6, total: 0, totalPages: 0 } } }))
     const calls: ApiCall[] = []
     const unexpected: string[] = []
     await page.route('http://localhost:3000/api/v1/**', async (route) => {
@@ -231,7 +232,7 @@ test('saved session reloads through bearer /users/me and redirects authenticated
     await expect(page).toHaveURL('/dashboard')
     await expect(page.getByRole('heading', { name: `Xin chào, ${user.fullName}!` })).toBeVisible()
   }
-  expect(api.calls.every((call) => call.key === 'GET /users/me' && call.authorization === `Bearer ${token}`)).toBe(true)
+  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call.key) && call.authorization === `Bearer ${token}`)).toBe(true)
 })
 
 test('logout clears the local session on success and network error', async ({ page, api }) => {
@@ -243,7 +244,13 @@ test('logout clears the local session on success and network error', async ({ pa
     })
     await page.goto('/profile')
     await expect(page.getByRole('heading', { name: user.fullName })).toBeVisible()
-    await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click()
+    await expect(page.locator('.app-header').getByRole('button', { name: /Đăng xuất/ })).toHaveCount(0)
+    await expect(page.getByRole('tab', { name: 'Cài đặt', exact: true })).toHaveCount(0)
+    await page.getByRole('link', { name: 'Cài đặt', exact: true }).click()
+    await expect(page).toHaveURL('/settings')
+    await expect(page.getByRole('heading', { level: 1, name: 'Cài đặt', exact: true })).toBeVisible()
+    await expect(page.getByText(user.email, { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Đăng xuất tài khoản', exact: true }).click()
     await expect(page).toHaveURL('/login')
     expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBeNull()
     expect(api.calls.filter((call) => call.key === 'POST /auth/logout').at(-1)).toEqual(
@@ -282,7 +289,9 @@ test('authentication remains usable in memory when browser storage writes fail',
   expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBeNull()
   await page.getByRole('link', { name: 'Tài khoản', exact: true }).click()
   await expect(page.getByRole('heading', { name: user.fullName })).toBeVisible()
-  await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click()
+  await page.getByRole('link', { name: 'Cài đặt', exact: true }).click()
+  await expect(page).toHaveURL('/settings')
+  await page.getByRole('button', { name: 'Đăng xuất tài khoản', exact: true }).click()
   await expect(page).toHaveURL('/login')
   expect(api.calls.find((call) => call.key === 'POST /auth/logout')?.authorization).toBe(`Bearer ${token}`)
 })
@@ -306,7 +315,10 @@ test('public and authenticated layouts fit 390px and 320px viewports', async ({ 
     await page.getByRole('link', { name: 'Tài khoản', exact: true }).click()
     await expect(page).toHaveURL('/profile')
     await expectNoOverflow(page)
-    await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click()
+    await page.getByRole('link', { name: 'Cài đặt', exact: true }).click()
+    await expect(page).toHaveURL('/settings')
+    await expectNoOverflow(page)
+    await page.getByRole('button', { name: 'Đăng xuất tài khoản', exact: true }).click()
     await expect(page).toHaveURL('/login')
   }
 })

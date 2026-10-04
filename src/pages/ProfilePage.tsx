@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, KeyboardEvent, SubmitEvent } from 'react'
-import { BookOpen, BriefcaseBusiness, CalendarDays, Camera, Check, ClipboardList, LogOut, Mail, MapPin, Moon, Save, ShieldCheck, Trash2, UsersRound } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { BookOpen, BriefcaseBusiness, CalendarDays, Camera, Check, ClipboardList, Mail, MapPin, Save, ShieldCheck, Trash2, UsersRound } from 'lucide-react'
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import type { AuthUser } from '../api/auth.api'
 import { useAuth } from '../auth/useAuth'
+import { roleLabels } from '../auth/roles'
 import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
 import { useProfileAvatar } from '../profile/useProfileAvatar'
 import { useProfileCover } from '../profile/useProfileCover'
 import { useAccountProfile } from '../profile/useAccountProfile'
-import { useTheme } from '../theme/useTheme'
 import './ProfilePage.css'
 
 const tabs = [
@@ -16,7 +16,6 @@ const tabs = [
   { id: 'classes', label: 'Lớp học' },
   { id: 'tasks', label: 'Nhiệm vụ' },
   { id: 'edit', label: 'Chỉnh sửa tài khoản' },
-  { id: 'settings', label: 'Cài đặt' },
 ] as const
 
 type ProfileTab = typeof tabs[number]['id']
@@ -32,23 +31,21 @@ function Avatar({ avatar, fullName }: { avatar: string | null; fullName: string 
   )
 }
 
-function ProfileContent({ user, logout }: { user: AuthUser; logout: () => Promise<void> }) {
+function ProfileContent({ user }: { user: AuthUser }) {
   const { profile, saveProfile } = useAccountProfile()
   const fullName = profile.fullName
   const [draft, setDraft] = useState(profile)
   const [editError, setEditError] = useState('')
   const [editNotice, setEditNotice] = useAutoDismissNotice()
-  const { isDarkMode, toggleTheme } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const fileInput = useRef<HTMLInputElement>(null)
   const coverInput = useRef<HTMLInputElement>(null)
-  const [signingOut, setSigningOut] = useState(false)
   const { avatar, saving, error, notice, updateAvatar, removeAvatar } = useProfileAvatar(user.id)
   const { cover, saving: savingCover, error: coverError, notice: coverNotice, updateCover, removeCover } = useProfileCover(user.id)
   const requestedTab = searchParams.get('tab')
   const activeTab: ProfileTab = tabs.find((tab) => tab.id === requestedTab)?.id ?? 'about'
-  const role = user.role === 'EXAM_MANAGER' ? 'Quản lý đề thi' : 'Học viên'
+  const role = roleLabels[user.role]
   const joined = new Date(user.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 
   useEffect(() => {
@@ -118,11 +115,6 @@ function ProfileContent({ user, logout }: { user: AuthUser; logout: () => Promis
     setDraft(profile)
     setEditError('')
     setEditNotice('')
-  }
-
-  async function handleLogout() {
-    setSigningOut(true)
-    try { await logout() } finally { setSigningOut(false) }
   }
 
   return (
@@ -277,39 +269,20 @@ function ProfileContent({ user, logout }: { user: AuthUser; logout: () => Promis
           </div>
         </section>
 
-        <section id="profile-panel-settings" role="tabpanel" aria-labelledby="profile-tab-settings" hidden={activeTab !== 'settings'} tabIndex={0}>
-          <div className="account-card account-settings-card">
-            <h2>Cài đặt tài khoản</h2>
-            <div className="account-settings-section">
-              <h3>Giao diện</h3>
-              <div className="account-theme-setting">
-                <span className="account-theme-icon"><Moon size={23} aria-hidden="true" /></span>
-                <div className="account-theme-copy">
-                  <p id="dark-mode-label">Chế độ tối</p>
-                </div>
-                <button className="account-theme-switch" type="button" role="switch"
-                  aria-checked={isDarkMode} aria-labelledby="dark-mode-label"
-                  onClick={toggleTheme}>
-                  <span className="account-theme-switch-thumb" aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-            <div className="account-settings-section">
-              <h3>Tài khoản</h3>
-              <p className="account-settings-email">{user.email}</p>
-              <button className="account-action-button" type="button" disabled={signingOut} onClick={handleLogout}>
-                <LogOut size={17} aria-hidden="true" />{signingOut ? 'Đang đăng xuất…' : 'Đăng xuất tài khoản'}
-              </button>
-            </div>
-          </div>
-        </section>
       </div>
     </div>
   )
 }
 
 export default function ProfilePage() {
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
+  const location = useLocation()
   if (!user) return null
-  return <ProfileContent key={user.id} user={user} logout={logout} />
+  const params = new URLSearchParams(location.search)
+  if (params.get('tab') === 'settings') {
+    params.delete('tab')
+    const query = params.toString()
+    return <Navigate to={{ pathname: '/settings', search: query ? `?${query}` : '', hash: location.hash }} replace />
+  }
+  return <ProfileContent key={user.id} user={user} />
 }

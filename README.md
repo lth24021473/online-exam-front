@@ -32,18 +32,22 @@ Mở `http://localhost:5173`. Backend cần cho phép CORS với origin này và
 | `/forgot-password` | Thông báo khôi phục mật khẩu chưa khả dụng | Khách |
 | `/dashboard` | Trang chủ | Đã đăng nhập |
 | `/profile` | Thông tin tài khoản | Đã đăng nhập |
+| `/settings` | Chế độ tối, email hiện tại và đăng xuất | Đã đăng nhập |
 | `/exams` | Danh sách đề đang mở, mở đề bằng mã | Đã đăng nhập |
 | `/exams/:examId` | Thông tin và hướng dẫn đề thi | Đã đăng nhập |
 | `/exams/:examId/take` | Bắt đầu / tiếp tục làm bài | STUDENT |
 | `/attempts/:attemptId/result` | Điểm và chi tiết đáp án từ backend | STUDENT |
 | `/history` | Lịch sử, lọc trạng thái và phân trang | STUDENT |
+| `/admin/users` | Danh sách/chi tiết người dùng, đổi vai trò, xóa tài khoản | ADMIN |
 | URL khác | Trang 404 | Công khai |
 
-Trang `/profile` mặc định dùng tông màu sáng đồng bộ với trang chủ: ảnh bìa, avatar tròn và năm tab **Giới thiệu / Lớp học / Nhiệm vụ / Chỉnh sửa tài khoản / Cài đặt**. Các nút chọn và xóa ảnh bìa nằm trong tab **Chỉnh sửa tài khoản**; xóa ảnh sẽ trở về ảnh mặc định. Tab hiện tại lưu trong query `?tab=about`, `classes`, `tasks`, `edit` hoặc `settings`, nên có thể mở trực tiếp và tải lại. Lớp học và Nhiệm vụ hiện là trạng thái chưa có dữ liệu vì backend chưa có API tương ứng. Avatar và ảnh bìa hỗ trợ PNG/JPG/WebP tối đa 2 MB mỗi ảnh; hai ảnh được lưu riêng theo người dùng trên trình duyệt, chưa đồng bộ lên backend.
+Trang `/dashboard` có avatar và lời chào, khung gợi ý, minh họa học tập và các tab theo trạng thái. Học viên xem **Đang làm / Hoàn thành / Đã hủy** từ API lịch sử, tiếp tục bài hoặc xem điểm backend. Quản lý đề và ADMIN xem **Đang mở / Bản nháp / Đã đóng** từ API đề thi. Danh sách hỗ trợ phân trang, báo lỗi và thử lại; bố cục thích ứng điện thoại và chế độ tối.
+
+Trang `/profile` mặc định dùng tông màu sáng đồng bộ với trang chủ: ảnh bìa, avatar tròn và bốn tab **Giới thiệu / Lớp học / Nhiệm vụ / Chỉnh sửa tài khoản**. Các nút chọn và xóa ảnh bìa nằm trong tab **Chỉnh sửa tài khoản**; xóa ảnh sẽ trở về ảnh mặc định. Tab hiện tại lưu trong query `?tab=about`, `classes`, `tasks` hoặc `edit`, nên có thể mở trực tiếp và tải lại. Lớp học và Nhiệm vụ hiện là trạng thái chưa có dữ liệu vì backend chưa có API tương ứng. Avatar và ảnh bìa hỗ trợ PNG/JPG/WebP tối đa 2 MB mỗi ảnh; hai ảnh được lưu riêng theo người dùng trên trình duyệt, chưa đồng bộ lên backend.
 
 Tab **Chỉnh sửa tài khoản** gồm tên tài khoản, nơi làm việc, nơi ở hiện tại và các nút đổi avatar/ảnh bìa. **Lưu thay đổi** lưu các trường văn bản; **Hủy thay đổi** khôi phục các trường này về dữ liệu đã lưu. Chọn ảnh sẽ lưu ảnh ngay. Tên mới được dùng ở hồ sơ, lời chào trang chủ và footer; nơi làm việc/nơi ở xuất hiện trong Giới thiệu. Backend trong ZIP chưa có API cập nhật tài khoản, nên thông tin chỉnh sửa lưu tại `online-exam.profile.<id>` trên trình duyệt, tách theo từng tài khoản. Lưu thất bại sẽ báo lỗi và giữ thông tin đang hiển thị.
 
-Trong **Cài đặt → Giao diện**, công tắc **Chế độ tối** đổi màu nền, chữ và thẻ nội dung cho toàn ứng dụng. Mặc định là giao diện sáng; lựa chọn bật/tắt được lưu tại `online-exam.theme` trên trình duyệt và giữ khi chuyển trang hoặc tải lại.
+Trang **Cài đặt** tại `/settings` nằm trên thanh điều hướng cạnh **Tài khoản**, gồm giao diện, email hiện tại và **Đăng xuất tài khoản**. URL cũ `/profile?tab=settings` tự chuyển sang `/settings`, giữ query khác và hash. Trong **Cài đặt → Giao diện**, công tắc **Chế độ tối** đổi màu nền, chữ và thẻ nội dung cho toàn ứng dụng. Mặc định là giao diện sáng; lựa chọn bật/tắt được lưu tại `online-exam.theme` trên trình duyệt và giữ khi chuyển trang hoặc tải lại.
 
 - `src/layouts/AuthLayout.tsx`: header, ảnh nền, giới thiệu và form qua `Outlet`.
 - `src/layouts/AppLayout.tsx`: header và điều hướng sau đăng nhập.
@@ -86,9 +90,9 @@ Backend `main` hiện có API Attempt. Giao diện dùng `POST /exams/:examId/at
 
 Trước khi tiếp tục bài được lưu trên thiết bị, frontend kiểm tra kết quả của lượt đó; bài đã nộp/hết giờ không vô tình tạo lượt mới. Nộp có xác nhận và khóa gửi lặp; nếu mất response sau khi nộp, frontend kiểm tra kết quả trước khi thử lại. Hủy bài giữ trạng thái trong lịch sử, không chấm điểm. Route làm bài/kết quả/lịch sử chỉ dành cho `STUDENT`.
 
-### Tạm dùng đề demo khi chờ người 2
+### Catalog đề thi và metadata demo
 
-`GET /exams` và `GET /exams/:examId` chưa được backend hiện tại cung cấp. Giao diện đã chuẩn bị adapter cho hai API đó; chỉ khi trả `404` mới dùng metadata demo cấu hình, không che lỗi mạng hoặc lỗi xác thực. Câu hỏi, đáp án đã chọn, thời hạn và điểm luôn dùng API Attempt thật. Có thể nhập mã đề được giảng viên chia sẻ khi chưa có catalog.
+Backend hiện có `GET /exams` và `GET /exams/:examId`. Danh sách học viên chỉ hiện PUBLISHED; manager thấy các đề thuộc quyền sở hữu và ADMIN thấy tất cả trạng thái. Adapter nhận mảng hoặc danh sách phân trang và lấy số câu từ `totalQuestions`, `_count.questions` hoặc `questions.length`. Nếu chạy backend cũ chưa có route, chỉ khi trả `404` mới dùng metadata demo cấu hình; lỗi mạng hoặc xác thực luôn được hiển thị. Câu hỏi, đáp án đã chọn, thời hạn và điểm luôn dùng API Attempt thật. Có thể nhập mã đề được giảng viên chia sẻ khi chưa có catalog.
 
 Để có đề demo trên database Docker đang chạy, từ backend chạy:
 
@@ -107,9 +111,9 @@ VITE_DEMO_EXAM_QUESTIONS=5
 
 Seed giữ dữ liệu đã có. Tài khoản demo nếu được seed tạo mới: `student@example.com / Student123`, `manager@example.com / Manager123`; tài khoản đã tồn tại giữ nguyên mật khẩu của nó.
 
-### Hợp đồng API để người 2 tích hợp
+### Hợp đồng API đề thi
 
-`GET /exams?page=1&limit=12&status=PUBLISHED` trả `{ items: ExamInfo[], meta: { page, limit, total, totalPages } }`. Adapter cũng nhận mảng `ExamInfo[]`. `GET /exams/:examId` trả một `ExamInfo`:
+`GET /exams` hiện trả mảng `ExamInfo[]` và frontend phân trang ở trình duyệt. Adapter cũng nhận `{ items: ExamInfo[], meta: { page, limit, total, totalPages } }` nếu backend bổ sung phân trang; học viên gửi `status=PUBLISHED`. `GET /exams/:examId` trả một `ExamInfo`:
 
 ```ts
 type ExamInfo = {
@@ -123,9 +127,15 @@ type ExamInfo = {
 }
 ```
 
-Hai API metadata này không cần trả đáp án đúng. Khi có API, catalog tự dùng dữ liệu backend. Khôi phục mật khẩu, chỉnh sửa tài khoản lên server và chức năng quản lý đề của người 2 vẫn cần API tương ứng.
+Hai API metadata không cần trả đáp án đúng. Khôi phục mật khẩu, chỉnh sửa hồ sơ lên server và màn hình quản lý đề/câu hỏi vẫn cần triển khai riêng.
 
 Ảnh nền lưu tại `public/images/study-background.jpg`, dùng được khi không có mạng. Ảnh trùng với tham chiếu thứ hai, lấy từ [nguồn ảnh](https://www.sainaptic.com/post/six-tips-on-how-to-stay-focused-during-gcse-revision). Tùy chỉnh bố cục trong `src/App.css`.
+
+## Quản trị tài khoản
+
+Frontend hỗ trợ đủ ba vai trò `STUDENT`, `EXAM_MANAGER`, `ADMIN`; nhãn tiếng Việt dùng chung ở hồ sơ và quản trị. Chỉ ADMIN có liên kết **Quản trị** và truy cập `/admin/users`. Danh sách/chi tiết dùng `GET /admin/users`, `GET /admin/users/:id`; đổi vai trò dùng `PATCH /admin/users/:id/role` với `{ role }`, xóa dùng `DELETE /admin/users/:id`. Hai thao tác đều yêu cầu xác nhận và khóa gửi lặp; lỗi giữ thông tin để thử lại. Thay đổi quyền hoặc xóa tài khoản đang dùng kết thúc phiên ngay trên trình duyệt. Các request dùng JWT cũ bị backend trả 401 sẽ xóa phiên và về đăng nhập, vẫn giữ cơ chế tránh 401 cũ xóa token mới.
+
+Tài khoản ADMIN cần được tạo/cấp quyền bởi backend; frontend không tự cấp quyền. Đăng ký công khai chỉ tạo STUDENT. Màn hình quản lý đề/câu hỏi không nằm trong màn hình quản trị tài khoản này.
 
 ## Kiểm tra
 
@@ -153,4 +163,15 @@ Remove-Item Env:REAL_API_E2E
 
 `attempts-real.spec.ts` được bỏ qua khi chạy bộ mock mặc định.
 
-Khi triển khai production với `BrowserRouter`, cấu hình máy chủ trả về `index.html` cho các URL frontend để mở trực tiếp hoặc reload `/login`, `/dashboard`, `/profile`.
+Kiểm tra ADMIN với API/MongoDB thật: `npm run test:e2e:admin-real`. Runner tạo đúng hai tài khoản kiểm thử ADMIN/STUDENT, dùng UI đổi quyền/xóa tài khoản, xác minh JWT cũ bị từ chối kể cả đổi quyền rồi đổi trở lại, và dọn bằng đúng ID. Manifest tạm ở thư mục temp của hệ điều hành, không tạo Docker hoặc thư mục code trung gian. Có thể đặt `FRONT_BACKEND_DIR`, `REAL_DATABASE_URL`, `FRONT_REAL_API_URL`; nếu test bị ngắt, dùng đường dẫn manifest được runner báo và `REAL_API_E2E=1 FRONT_ADMIN_FIXTURE=<manifest>` để chạy `node tests/fixtures/admin-real-api.cjs cleanup`. Bộ test này được bỏ qua khi chạy test mock mặc định. Nếu cần dọn manifest được giữ lại sau sự cố, trong PowerShell:
+
+```powershell
+$env:REAL_API_E2E='1'
+$env:FRONT_ADMIN_FIXTURE='C:\duong-dan-manifest\fixture.json'
+node tests/fixtures/admin-real-api.cjs cleanup
+Remove-Item Env:REAL_API_E2E
+Remove-Item Env:FRONT_ADMIN_FIXTURE
+```
+
+
+Khi triển khai production với `BrowserRouter`, cấu hình máy chủ trả về `index.html` cho các URL frontend để mở trực tiếp hoặc reload `/login`, `/dashboard`, `/profile`, `/settings`.

@@ -6,10 +6,13 @@ import RegisterPage from '../pages/RegisterPage'
 import ForgotPasswordPage from '../pages/ForgotPasswordPage'
 import DashboardPage from '../pages/DashboardPage'
 import ProfilePage from '../pages/ProfilePage'
+import SettingsPage from '../pages/SettingsPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import GuestRoute from './GuestRoute'
 import ProtectedRoute from './ProtectedRoute'
 import StudentRoute from './StudentRoute'
+import AdminRoute from './AdminRoute'
+import AdminUsersPage from '../pages/AdminUsersPage'
 import ExamsPage from '../pages/ExamsPage'
 import ExamDetailPage from '../pages/ExamDetailPage'
 import TakeExamPage from '../pages/TakeExamPage'
@@ -31,8 +34,12 @@ export default function AppRouter() {
         <Route element={<AppLayout />}>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="settings" element={<SettingsPage />} />
           <Route path="exams" element={<ExamsPage />} />
           <Route path="exams/:examId" element={<ExamDetailPage />} />
+          <Route element={<AdminRoute />}>
+            <Route path="admin/users" element={<AdminUsersPage />} />
+          </Route>
           <Route element={<StudentRoute />}>
             <Route path="exams/:examId/take" element={<TakeExamPage />} />
             <Route path="history" element={<AttemptHistoryPage />} />
