@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { AuthRole, AuthUser } from '../api/auth.api'
 import { adminUsersApi, getAdminErrorMessage } from '../api/admin-users'
 import type { UpdatedAdminUser } from '../api/admin-users'
-import { expireSession } from '../api/axios'
+import { expireSession, getAccessToken } from '../api/axios'
 import { useAuth } from '../auth/useAuth'
 import { accountRoles, roleLabels } from '../auth/roles'
 import './AdminUsersPage.css'
@@ -52,7 +52,9 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
   const current = loaded?.key === key ? loaded : null
   const account = current && 'value' in current ? current.value : null
 
-  const finishOwnSession = (message: string) => {
+  const finishOwnSession = (message: string, requestToken: string | null) => {
+    // A delayed response from a previous login must not clear a newer session.
+    if (!requestToken || getAccessToken() !== requestToken) return
     expireSession(message)
     navigate('/login', { replace: true })
   }
@@ -60,6 +62,7 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
   async function confirmAction() {
     if (!account || !confirmation || mutationLock.current) return
     mutationLock.current = true
+    const requestToken = getAccessToken()
     setBusy(true)
     onBusy(true)
     setFeedback(null)
@@ -67,7 +70,7 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
       if (confirmation === 'role') {
         const updated = await adminUsersApi.updateRole(account.id, role)
         if (account.id === currentUserId) {
-          finishOwnSession('Vai trò của bạn đã thay đổi. Vui lòng đăng nhập lại.')
+          finishOwnSession('Vai trò của bạn đã thay đổi. Vui lòng đăng nhập lại.', requestToken)
           return
         }
         setLoaded({ key, value: { ...account, ...updated } })
@@ -77,7 +80,7 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
       } else {
         await adminUsersApi.remove(account.id)
         if (account.id === currentUserId) {
-          finishOwnSession('Tài khoản của bạn đã được xóa.')
+          finishOwnSession('Tài khoản của bạn đã được xóa.', requestToken)
           return
         }
         onDelete(account.id)

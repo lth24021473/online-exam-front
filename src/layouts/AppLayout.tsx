@@ -17,7 +17,7 @@ export default function AppLayout() {
         <Brand to="/dashboard" />
         <nav className="app-nav" aria-label="Điều hướng chính">
           <NavLink to="/dashboard"><House size={18} aria-hidden="true" /> Trang chủ</NavLink>
-          <NavLink to="/exams"><BookOpen size={18} aria-hidden="true" /> Đề thi</NavLink>
+          {user?.role === 'EXAM_MANAGER' || user?.role === 'ADMIN' ? <NavLink to="/manage/exams"><BookOpen size={18} aria-hidden="true" /> Quản lý đề</NavLink> : <NavLink to="/exams"><BookOpen size={18} aria-hidden="true" /> Đề thi</NavLink>}
           {user?.role === 'STUDENT' && <NavLink to="/history"><History size={18} aria-hidden="true" /> Lịch sử</NavLink>}
           {user?.role === 'ADMIN' && <NavLink to="/admin/users"><ShieldCheck size={18} aria-hidden="true" /> Quản trị</NavLink>}
           <NavLink to="/profile"><UserRound size={18} aria-hidden="true" /> Tài khoản</NavLink>

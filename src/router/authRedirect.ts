@@ -8,10 +8,11 @@ export function getAuthDestination(state: unknown, role?: AuthRole): string {
   const pathname = from.pathname
   if (typeof pathname !== 'string' || !pathname.startsWith('/') || pathname.startsWith('//')) return '/dashboard'
   const adminDestination = /^\/admin(?:\/|$)/i.test(pathname)
+  const managerDestination = /^\/manage(?:\/|$)/i.test(pathname)
   const studentDestination = /^\/history(?:\/|$)/i.test(pathname)
     || /^\/exams\/[^/]+\/take(?:\/|$)/i.test(pathname)
     || /^\/attempts\/[^/]+\/result(?:\/|$)/i.test(pathname)
-  if (role && ((adminDestination && role !== 'ADMIN') || (studentDestination && role !== 'STUDENT'))) return '/dashboard'
+  if (role && ((adminDestination && role !== 'ADMIN') || (studentDestination && role !== 'STUDENT') || (managerDestination && role === 'STUDENT'))) return '/dashboard'
   const search = 'search' in from && typeof from.search === 'string' ? from.search : ''
   const hash = 'hash' in from && typeof from.hash === 'string' ? from.hash : ''
   return `${pathname}${search}${hash}`

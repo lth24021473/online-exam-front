@@ -32,7 +32,7 @@ async function main() {
       return { admin: { id: admin.id, email: admin.email }, target: { id: target.id, email: target.email } };
     });
     const fixture = {
-      kind: 'online-exam-admin-ui-owned-fixture', ...records, password,
+      kind: 'online-exam-admin-ui-owned-fixture', ...records, password, revokedTokenHashes: [],
       apiUrl: process.env.FRONT_REAL_API_URL || 'http://localhost:3000/api/v1',
     };
     try {
@@ -49,6 +49,11 @@ async function main() {
     if (!fs.existsSync(manifest)) return;
     const fixture = JSON.parse(fs.readFileSync(manifest, 'utf8'));
     if (fixture.kind !== 'online-exam-admin-ui-owned-fixture') throw new Error('Invalid owned ADMIN fixture manifest');
+    const hashes = fixture.revokedTokenHashes || [];
+    if (!Array.isArray(hashes) || !hashes.every((value) => typeof value === 'string' && /^[a-f\d]{64}$/.test(value))) {
+      throw new Error('Invalid owned revoked token hashes');
+    }
+    for (const tokenHash of hashes) await prisma.revokedToken.deleteMany({ where: { tokenHash } });
     const records = [fixture.admin, fixture.target];
     for (const record of records) {
       if (!record || !/^[a-f\d]{24}$/i.test(record.id) || !/^front-admin(?:-target)?-[a-f\d-]+@example\.com$/.test(record.email)) {
@@ -60,7 +65,7 @@ async function main() {
       await prisma.user.delete({ where: { id: record.id } });
     }
     fs.unlinkSync(manifest);
-    console.log('Owned ADMIN UI accounts cleaned by their exact IDs.');
+    console.log('Owned ADMIN UI accounts and revoked tokens cleaned by their exact IDs/hashes.');
     return;
   }
   throw new Error('Expected create or cleanup');

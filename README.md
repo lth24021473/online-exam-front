@@ -38,6 +38,9 @@ Mở `http://localhost:5173`. Backend cần cho phép CORS với origin này và
 | `/exams/:examId/take` | Bắt đầu / tiếp tục làm bài | STUDENT |
 | `/attempts/:attemptId/result` | Điểm và chi tiết đáp án từ backend | STUDENT |
 | `/history` | Lịch sử, lọc trạng thái và phân trang | STUDENT |
+| `/manage/exams` | Danh sách, tìm/lọc và tạo đề bản nháp | EXAM_MANAGER, ADMIN |
+| `/manage/exams/:examId` | Sửa đề, soạn câu hỏi/đáp án, mở/đóng và xóa đề nháp | Chủ đề EXAM_MANAGER, ADMIN |
+| `/manage/exams/:examId/results` | Kết quả học sinh, lọc trạng thái, phân trang và thống kê điểm | Chủ đề EXAM_MANAGER, ADMIN |
 | `/admin/users` | Danh sách/chi tiết người dùng, đổi vai trò, xóa tài khoản | ADMIN |
 | URL khác | Trang 404 | Công khai |
 
@@ -127,7 +130,7 @@ type ExamInfo = {
 }
 ```
 
-Hai API metadata không cần trả đáp án đúng. Khôi phục mật khẩu, chỉnh sửa hồ sơ lên server và màn hình quản lý đề/câu hỏi vẫn cần triển khai riêng.
+API detail chỉ trả đáp án đúng cho chủ đề EXAM_MANAGER/ADMIN. STUDENT không nhận khóa đáp án trước khi nộp. Khôi phục mật khẩu và chỉnh sửa hồ sơ lên server thuộc phần mở rộng ngoài pha 1.
 
 Ảnh nền lưu tại `public/images/study-background.jpg`, dùng được khi không có mạng. Ảnh trùng với tham chiếu thứ hai, lấy từ [nguồn ảnh](https://www.sainaptic.com/post/six-tips-on-how-to-stay-focused-during-gcse-revision). Tùy chỉnh bố cục trong `src/App.css`.
 
@@ -153,11 +156,13 @@ Kiểm tra với API và MongoDB Docker thật (backend đang chạy cổng 3000
 npm run test:e2e:real
 ```
 
-Runner tạo tài khoản/đề riêng, kiểm tra lưu/đổi đáp án, reload, mất mạng, nộp lặp, hủy giữ đáp án, bài đã hết giờ và đồng hồ tự nộp; sau đó dọn bằng đúng ID đã tạo. Không cần tạo Docker mới. Mặc định dùng Mongo local `mongodb://127.0.0.1:27017/online_exam?replicaSet=rs0&directConnection=true`; có thể đặt `FRONT_BACKEND_DIR` và `REAL_DATABASE_URL` để trỏ đúng backend/database đang phục vụ API. Nếu lần chạy bị ngắt và còn `.local/real-fixture.json`, chạy helper cleanup trước khi thử lại (PowerShell):
+Runner tạo tài khoản/đề riêng, kiểm tra lưu/đổi đáp án, reload, mất mạng, nộp lặp, hủy giữ đáp án, bài đã hết giờ và đồng hồ tự nộp; sau đó dọn bằng đúng ID đã tạo. Không cần tạo Docker mới. Mặc định dùng Mongo local `mongodb://127.0.0.1:27017/online_exam?replicaSet=rs0&directConnection=true`; có thể đặt `FRONT_BACKEND_DIR` và `REAL_DATABASE_URL` để trỏ đúng backend/database đang phục vụ API. Manifest mặc định nằm trong thư mục temp hệ điều hành; có thể đặt `FRONT_REAL_FIXTURE` để chọn đường dẫn khác. Nếu runner báo cleanup lỗi, giữ manifest và dùng đúng đường dẫn đó để dọn lại (PowerShell):
 
 ```powershell
 $env:REAL_API_E2E='1'
+$env:FRONT_REAL_FIXTURE='C:\duong-dan-manifest\fixture.json'
 node tests/fixtures/real-api.cjs cleanup
+Remove-Item Env:FRONT_REAL_FIXTURE
 Remove-Item Env:REAL_API_E2E
 ```
 
@@ -175,3 +180,17 @@ Remove-Item Env:FRONT_ADMIN_FIXTURE
 
 
 Khi triển khai production với `BrowserRouter`, cấu hình máy chủ trả về `index.html` cho các URL frontend để mở trực tiếp hoặc reload `/login`, `/dashboard`, `/profile`, `/settings`.
+
+## Quản lý đề thi và kết quả pha 1
+
+EXAM_MANAGER/ADMIN mở **Quản lý đề** trên thanh điều hướng. Tạo bản nháp, sửa tiêu đề/mô tả/hướng dẫn/thời gian, thêm/sửa/xóa câu hỏi và các lựa chọn, chọn đúng một đáp án đúng cho mỗi câu. Vị trí câu hỏi không được trùng. Mở đề cần ít nhất một câu, mỗi câu có ít nhất hai lựa chọn có nội dung và đúng một lựa chọn đúng. Nội dung chỉ sửa khi DRAFT; khi mở đề thì khóa để giữ kết quả chấm ổn định. Đóng đề ngăn lượt làm mới và giữ bài đang làm/kết quả. Xóa đề nháp dọn cả câu hỏi/lựa chọn, có xác nhận và khóa gửi lặp.
+
+**Kết quả học sinh** lấy từ `GET /exams/:examId/results?page=1&limit=10&status=SUBMITTED`. Bảng hiển thị học sinh, trạng thái, thời gian, số đúng/sai và điểm backend trả về. Bộ lọc/phân trang áp dụng vào bảng; tổng lượt/đang làm/đã nộp/đã hủy và trung bình/cao nhất/thấp nhất tính trên toàn đề. Chỉ chủ đề hoặc ADMIN truy cập được. Bài hết giờ được backend chốt/chấm trước khi trả kết quả. Mất mạng báo lỗi/thử lại; giao diện hỗ trợ điện thoại và chế độ tối.
+
+Kiểm tra luồng đầy đủ với API và MongoDB Docker hiện có:
+
+```sh
+npm run test:e2e:manager-real
+```
+
+Runner tạo hai tài khoản Manager/STUDENT riêng; UI tạo/sửa đề, thêm/sửa/xóa câu hỏi, mở đề; học sinh làm và nộp bài; Manager xem điểm, lọc trạng thái, đóng đề và xóa một đề nháp có câu hỏi. Manifest ghi ID sở hữu trước khi tạo dữ liệu trong thư mục temp hệ điều hành; cleanup chỉ xóa dữ liệu kiểm thử theo các ID đó, giữ manifest nếu cần dọn lại. Không tạo Docker mới. Test chỉ chạy khi `MANAGER_API_E2E=1`, không chạy trong bộ mock mặc định. Sau sự cố, đặt `MANAGER_API_E2E=1` và `FRONT_MANAGER_FIXTURE` bằng đường dẫn manifest runner đã báo, rồi chạy `node tests/fixtures/manager-real-api.cjs cleanup`.

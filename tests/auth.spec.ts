@@ -349,3 +349,13 @@ test('the supplied study photo loads and login previews are captured', async ({ 
   await capturePreview(page, 'test-results/preview-login-mobile.png')
 })
 
+
+test('a STUDENT login returns to dashboard when a saved destination requires manager access', async ({ page, api }) => {
+  api.handle('POST /auth/login', reply(200, session))
+  await page.goto('/manage/exams?status=DRAFT')
+  await expect(page).toHaveURL('/login')
+  await fillLogin(page)
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
+  await expect(page).toHaveURL('/dashboard')
+  expect(api.calls.some((call) => call.key.startsWith('GET /exams'))).toBe(false)
+})

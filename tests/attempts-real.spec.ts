@@ -101,7 +101,7 @@ test.describe('API thật và dữ liệu kiểm thử riêng', () => {
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
     await expect(page).toHaveURL('/dashboard')
 
-    await page.getByRole('link', { name: 'Khám phá đề thi' }).click()
+    await page.getByRole('tabpanel', { name: 'Đang làm', exact: true }).getByRole('link', { name: 'Khám phá đề thi', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Đề thi đang mở', exact: true })).toBeVisible()
     await page.getByLabel('Bạn đã có mã đề?', { exact: true }).fill(fixture.examId)
     await page.getByRole('button', { name: 'Mở đề thi', exact: true }).click()

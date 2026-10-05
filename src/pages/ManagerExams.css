@@ -1,0 +1,46 @@
+.manager-page { min-width: 0; }
+.manager-form fieldset { margin: 0; padding: 0; border: 0; min-width: 0; display: grid; gap: 18px; }
+.manager-form label, .manager-toolbar label, .manager-results-filter { display: grid; gap: 8px; min-width: 0; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.manager-form input:not([type='radio']), .manager-form textarea, .manager-toolbar input, .manager-toolbar select, .manager-results-filter select { box-sizing: border-box; min-width: 0; width: 100%; padding: 12px; border: 1px solid var(--field-border); border-radius: 10px; background: var(--surface); color: var(--text-primary); font: inherit; }
+.manager-form textarea { resize: vertical; }
+.manager-form input:disabled, .manager-form textarea:disabled { opacity: .75; }
+.manager-form > fieldset > .button { justify-self: start; }
+.manager-toolbar { display: grid; grid-template-columns: minmax(0, 2fr) minmax(150px, 1fr) auto; gap: 18px; align-items: end; }
+.manager-page .exam-page-heading { flex-wrap: wrap; gap: 20px; }
+.manager-page .exam-page-heading > div { min-width: 0; }
+.manager-page h1, .manager-page h2, .manager-page h3, .manager-page p { overflow-wrap: anywhere; }
+.manager-exam-code { word-break: break-all; }
+.manager-question-list { display: grid; gap: 18px; }
+.manager-question-list > h2 { margin-bottom: 0; }
+.manager-question-card h3 { margin-top: 0; line-height: 1.6; }
+.manager-question-card ol { display: grid; gap: 12px; padding-left: 25px; overflow-wrap: anywhere; }
+.manager-correct-answer { color: var(--positive); font-weight: 600; }
+.manager-correct-answer span { display: inline-block; margin-left: 14px; font-size: 12px; padding: 4px 8px; border-radius: 6px; background: var(--surface-muted); }
+.manager-form .manager-options { border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.manager-options legend { padding: 0 8px; font-size: 14px; line-height: 1.5; }
+.manager-option-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 15px; align-items: end; }
+.manager-form .manager-correct-choice { display: flex; align-items: center; min-height: 44px; gap: 8px; }
+.manager-correct-choice input { accent-color: var(--accent); width: 18px; height: 18px; }
+.manager-text-button { border: 0; background: transparent; color: var(--accent); padding: 12px; min-height: 44px; }
+.manager-text-button:disabled { opacity: .4; cursor: default; }
+.manager-readonly-note { padding: 16px; border-radius: 10px; background: var(--surface-highlight); line-height: 1.6; }
+.manager-results-filter { width: min(100%, 320px); }
+.manager-result-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 15px; }
+.manager-result-summary > div { display: grid; gap: 12px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; min-width: 0; }
+.manager-result-summary span { font-size: 13px; color: var(--text-muted); }
+.manager-result-summary strong { font-size: 23px; color: var(--text-primary); }
+.manager-results-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.manager-results-table { width: 100%; min-width: 840px; border-collapse: collapse; text-align: left; font-size: 14px; }
+.manager-results-table th, .manager-results-table td { padding: 16px; border-bottom: 1px solid var(--border); line-height: 1.6; vertical-align: top; }
+.manager-results-table th { background: var(--surface-muted); }
+.manager-results-table td:first-child { min-width: 190px; }
+.manager-student-email { display: block; color: var(--text-muted); font-size: 12px; overflow-wrap: anywhere; }
+@media (max-width: 680px) {
+  .manager-toolbar { grid-template-columns: 1fr; }
+  .manager-toolbar .button { justify-self: start; }
+  .manager-result-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .manager-form > fieldset > .button, .manager-page .manager-status-actions .button { width: 100%; justify-content: center; }
+  .manager-option-row { gap: 8px; grid-template-columns: minmax(0, 1fr) auto; }
+  .manager-option-input { grid-column: 1 / -1; }
+  .manager-option-row .manager-text-button { justify-self: end; }
+}
