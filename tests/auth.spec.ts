@@ -195,7 +195,7 @@ test('direct registration shows success on login without creating an authenticat
   await expect(page.getByLabel('Mật khẩu', { exact: true })).toHaveValue('')
   expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBeNull()
   await capturePreview(page, 'test-results/registration-success.png')
-  await page.clock.runFor(1999)
+  await page.clock.runFor(999)
   await expect(page.getByRole('status')).toBeVisible()
   await page.clock.runFor(1)
   await expect(page.getByRole('status')).toHaveCount(0)

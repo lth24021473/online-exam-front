@@ -9,7 +9,7 @@ export function useAutoDismissNotice(initialText = '') {
 
   useEffect(() => {
     if (!notice.text) return
-    const timeout = window.setTimeout(() => setNotice({ text: '' }), 2000)
+    const timeout = window.setTimeout(() => setNotice({ text: '' }), 1000)
     return () => window.clearTimeout(timeout)
   }, [notice])
 

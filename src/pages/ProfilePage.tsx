@@ -133,7 +133,6 @@ function ProfileContent({ user }: { user: AuthUser }) {
           </div>
           <div className="account-name">
             <h1>{fullName}</h1>
-            <p><span className="account-role-dot" />{role}<span className="account-meta-divider">•</span>Tham gia {joined}</p>
           </div>
         </div>
         <div className="account-tab-bar" role="tablist" aria-label="Thông tin tài khoản">

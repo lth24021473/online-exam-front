@@ -1,5 +1,5 @@
 import { BookOpen, History, House, Settings, ShieldCheck, UserRound } from 'lucide-react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 import Brand from '../components/Brand'
 import { useAuth } from '../auth/useAuth'
 import { useAccountProfile } from '../profile/useAccountProfile'
@@ -7,11 +7,8 @@ import { useAccountProfile } from '../profile/useAccountProfile'
 export default function AppLayout() {
   const { user } = useAuth()
   const { profile } = useAccountProfile()
-  const location = useLocation()
-  const isProfile = location.pathname.replace(/\/+$/, '') === '/profile'
-  const isDashboard = location.pathname.replace(/\/+$/, '').toLowerCase() === '/dashboard'
   return (
-    <div className={`app-layout${isProfile ? ' profile-app-layout' : ''}${isDashboard ? ' dashboard-app-layout' : ''}`}>
+    <div className="app-layout">
       <a className="skip-link" href="#main-content">Đến nội dung chính</a>
       <header className="app-header">
         <Brand to="/dashboard" />

@@ -182,6 +182,31 @@ test('deleting another account requires explicit confirmation and refreshes the 
   }])
 })
 
+test('account role and deletion notices each expire after one second', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-03T00:00:00Z') })
+  await openAdmin(page)
+  await selectUser(page, student)
+  await page.clock.pauseAt(new Date('2026-10-03T01:00:00Z'))
+  await page.getByLabel('Vai trò', { exact: true }).selectOption('EXAM_MANAGER')
+  await page.getByRole('button', { name: 'Lưu vai trò', exact: true }).click()
+  await page.getByRole('button', { name: 'Xác nhận đổi vai trò', exact: true }).click()
+  const roleNotice = page.getByRole('status').filter({ hasText: 'Đã cập nhật vai trò.' })
+  await expect(roleNotice).toBeVisible()
+  await page.clock.runFor(999)
+  await expect(roleNotice).toBeVisible()
+  await page.clock.runFor(1)
+  await expect(roleNotice).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Xóa tài khoản', exact: true }).click()
+  await page.getByRole('button', { name: 'Xác nhận xóa', exact: true }).click()
+  const deleteNotice = page.getByRole('status').filter({ hasText: 'Đã xóa tài khoản.' })
+  await expect(deleteNotice).toBeVisible()
+  await page.clock.runFor(999)
+  await expect(deleteNotice).toBeVisible()
+  await page.clock.runFor(1)
+  await expect(deleteNotice).toHaveCount(0)
+})
+
 for (const role of ['STUDENT', 'EXAM_MANAGER'] as const) {
   test(`${role} cannot open the administration route or trigger admin requests`, async ({ page, api }) => {
     api.role = role

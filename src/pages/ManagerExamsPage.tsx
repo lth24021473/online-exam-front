@@ -5,12 +5,14 @@ import { examStatusLabels, getManagerErrorMessage, managerExamsApi } from '../ap
 import type { ExamPayload, ExamStatus, ManagerExam } from '../api/manager-exams'
 import { useAuth } from '../auth/useAuth'
 import ManagerExamForm from '../components/ManagerExamForm'
+import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
 import './ManagerExams.css'
 
 export default function ManagerExamsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [notice] = useAutoDismissNotice(typeof location.state?.notice === 'string' ? location.state.notice : '')
   const [revision, setRevision] = useState(0)
   const [loaded, setLoaded] = useState<{ key: string; exams?: ManagerExam[]; error?: string } | null>(null)
   const [status, setStatus] = useState<ExamStatus | ''>('')
@@ -42,7 +44,7 @@ export default function ManagerExamsPage() {
   }
   return <div className="exam-page manager-page">
     <header className="exam-page-heading"><div><h1>Quản lý đề thi</h1><p>{user?.role === 'ADMIN' ? 'Quản lý đề thi của toàn hệ thống.' : 'Soạn đề, mở bài thi và theo dõi kết quả học sinh.'}</p></div><button className="button button-primary button-inline" disabled={busy} onClick={() => { setCreating((value) => !value); setError('') }}><Plus size={18} aria-hidden="true" />{creating ? 'Đóng form tạo đề' : 'Tạo đề thi'}</button></header>
-    {typeof location.state?.notice === 'string' && <p className="form-success" role="status">{location.state.notice}</p>}
+    {notice && <p className="form-success" role="status">{notice}</p>}
     {creating && <section className="exam-panel" aria-label="Tạo đề thi"><h2>Tạo đề thi mới</h2>{error && <p className="form-error" role="alert">{error}</p>}<ManagerExamForm busy={busy} submitLabel="Lưu đề mới" onSubmit={create} /></section>}
     <div className="manager-toolbar"><label>Tìm đề thi<input type="search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1) }} /></label><label>Trạng thái đề<select value={status} onChange={(event) => { setStatus(event.target.value as ExamStatus | ''); setPage(1) }}><option value="">Tất cả</option>{Object.entries(examStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><button className="button button-secondary button-inline" onClick={() => setRevision((value) => value + 1)}><RefreshCw size={17} aria-hidden="true" />Làm mới</button></div>
     {!current ? <p className="exam-panel" role="status">Đang tải đề thi…</p> : current.error ? <section className="exam-panel"><p className="form-error" role="alert">{current.error}</p><button className="button button-primary button-inline" onClick={() => setRevision((value) => value + 1)}>Thử lại</button></section> : <><p className="exam-muted">{filtered.length} đề thi</p>

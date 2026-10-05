@@ -269,6 +269,31 @@ test('deleting a draft returns to the refreshed list with success notice', async
   expect(mutations(api).map((call) => call.key)).toEqual([`DELETE /exams/${draftId}`])
 })
 
+test('exam creation, updates and deletion notices each expire after one second', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-03T00:00:00Z') })
+  await page.goto('/manage/exams')
+  await page.getByRole('button', { name: 'Tạo đề thi', exact: true }).click()
+  await page.getByLabel('Tên đề thi').fill('Đề kiểm tra thông báo')
+  await page.clock.pauseAt(new Date('2026-10-03T01:00:00Z'))
+  await page.getByRole('button', { name: 'Lưu đề mới', exact: true }).click()
+
+  async function expectNoticeToExpire(text: string) {
+    const notice = page.getByRole('status').filter({ hasText: text })
+    await expect(notice).toBeVisible()
+    await page.clock.runFor(999)
+    await expect(notice).toBeVisible()
+    await page.clock.runFor(1)
+    await expect(notice).toHaveCount(0)
+  }
+
+  await expectNoticeToExpire('Đã tạo đề thi bản nháp.')
+  await page.getByRole('button', { name: 'Lưu thông tin đề', exact: true }).click()
+  await expectNoticeToExpire('Đã lưu thông tin đề thi.')
+  await page.getByRole('button', { name: 'Xóa đề thi', exact: true }).click()
+  await page.getByRole('button', { name: 'Xác nhận xóa đề', exact: true }).click()
+  await expectNoticeToExpire('Đã xóa đề thi.')
+})
+
 test('students cannot mount privileged manager pages or call exam APIs', async ({ page, api }) => {
   api.role = 'STUDENT'
   for (const path of ['/manage/exams', `/manage/exams/${draftId}`, `/manage/exams/${draftId}/results`]) {

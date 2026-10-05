@@ -5,6 +5,7 @@ import { examStatusLabels, getManagerErrorMessage, managerExamsApi } from '../ap
 import type { ExamPayload, ManagerExam, ManagerQuestion, QuestionPayload } from '../api/manager-exams'
 import ManagerExamForm from '../components/ManagerExamForm'
 import ManagerQuestionForm from '../components/ManagerQuestionForm'
+import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
 import './ManagerExams.css'
 
 type Confirmation = { action: 'publish' | 'close' | 'deleteExam' | 'deleteQuestion'; question?: ManagerQuestion }
@@ -26,7 +27,8 @@ function ManagerExamDetailContent({ examId }: { examId: string }) {
   const [revision, setRevision] = useState(0)
   const [loaded, setLoaded] = useState<{ id: string; exam?: ManagerExam; error?: string } | null>(null)
   const [busy, setBusy] = useState(false)
-  const [feedback, setFeedback] = useState<{ error?: boolean; message: string } | null>(null)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useAutoDismissNotice(typeof location.state?.notice === 'string' ? location.state.notice : '')
   const [editing, setEditing] = useState<ManagerQuestion | null>(null)
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
   const lock = useRef(false)
@@ -55,18 +57,19 @@ function ManagerExamDetailContent({ examId }: { examId: string }) {
   function updateExam(change: Partial<ManagerExam>) {
     setLoaded((previous) => previous?.exam && previous.id === examId ? { ...previous, exam: { ...previous.exam, ...change } } : previous)
   }
+  function clearFeedback() { setError(''); setNotice('') }
   async function mutate(work: () => Promise<void>) {
     if (lock.current) return
-    lock.current = true; setBusy(true); setFeedback(null)
+    lock.current = true; setBusy(true); clearFeedback()
     try { await work() }
-    catch (failure) { setFeedback({ error: true, message: getManagerErrorMessage(failure) }) }
+    catch (failure) { setError(getManagerErrorMessage(failure)) }
     finally { lock.current = false; setBusy(false); setConfirmation(null) }
   }
   async function saveMetadata(payload: ExamPayload) {
     await mutate(async () => {
       const result = await managerExamsApi.update(examId, payload)
       updateExam({ ...result, questions })
-      setFeedback({ message: 'Đã lưu thông tin đề thi.' })
+      setNotice('Đã lưu thông tin đề thi.')
     })
   }
   async function saveQuestion(payload: QuestionPayload) {
@@ -74,7 +77,7 @@ function ManagerExamDetailContent({ examId }: { examId: string }) {
       const result = editing ? await managerExamsApi.updateQuestion(examId, editing.id, payload) : await managerExamsApi.createQuestion(examId, payload)
       const updated = editing ? questions.map((question) => question.id === result.id ? result : question) : [...questions, result]
       updateExam({ questions: updated, totalQuestions: updated.length })
-      setEditing(null); setFeedback({ message: 'Đã lưu câu hỏi.' })
+      setEditing(null); setNotice('Đã lưu câu hỏi.')
     })
   }
   async function confirmAction() {
@@ -89,20 +92,20 @@ function ManagerExamDetailContent({ examId }: { examId: string }) {
         const updated = questions.filter((question) => question.id !== confirmation.question?.id)
         updateExam({ questions: updated, totalQuestions: updated.length })
         if (editing?.id === confirmation.question.id) setEditing(null)
-        setFeedback({ message: 'Đã xóa câu hỏi.' }); return
+        setNotice('Đã xóa câu hỏi.'); return
       }
       const result = confirmation.action === 'publish' ? await managerExamsApi.publish(examId) : await managerExamsApi.close(examId)
       updateExam({ ...result, questions }); setEditing(null)
-      setFeedback({ message: confirmation.action === 'publish' ? 'Đã mở đề thi.' : 'Đã đóng đề thi.' })
+      setNotice(confirmation.action === 'publish' ? 'Đã mở đề thi.' : 'Đã đóng đề thi.')
     })
   }
-  function refresh() { setLoaded(null); setFeedback(null); setEditing(null); setRevision((value) => value + 1) }
+  function refresh() { setLoaded(null); clearFeedback(); setEditing(null); setRevision((value) => value + 1) }
   return <div className="exam-page manager-page">
     <Link className="exam-back-link" to="/manage/exams"><ArrowLeft size={17} aria-hidden="true" />Quản lý đề thi</Link>
+    {notice && <p className="form-success" role="status">{notice}</p>}
     {!current ? <p className="exam-panel" role="status">Đang tải đề thi…</p> : current.error ? <section className="exam-panel"><p className="form-error" role="alert">{current.error}</p><button className="button button-primary button-inline" onClick={refresh}>Thử lại</button></section> : exam && <>
       <header className="exam-page-heading"><div><span className="exam-badge">{examStatusLabels[exam.status]}</span><h1>{exam.title}</h1><p>Mã đề: <span className="manager-exam-code">{exam.id}</span></p></div><Link className="button button-secondary button-inline" to={`/manage/exams/${examId}/results`}>Kết quả học sinh</Link></header>
-      {feedback && <p className={feedback.error ? 'form-error' : 'form-success'} role={feedback.error ? 'alert' : 'status'}>{feedback.message}</p>}
-      {!feedback && typeof location.state?.notice === 'string' && <p className="form-success" role="status">{location.state.notice}</p>}
+      {error && <p className="form-error" role="alert">{error}</p>}
       <div className="exam-actions manager-status-actions">
         {editable && <button className="button button-primary button-inline" disabled={locked || !publishable} onClick={() => setConfirmation({ action: 'publish' })}>Mở đề thi</button>}
         {exam.status === 'PUBLISHED' && <button className="button button-primary button-inline" disabled={locked} onClick={() => setConfirmation({ action: 'close' })}>Đóng đề thi</button>}
@@ -114,7 +117,7 @@ function ManagerExamDetailContent({ examId }: { examId: string }) {
       <section className="exam-panel"><h2>Thông tin đề thi</h2><ManagerExamForm key={exam.id} initial={{ title: exam.title, description: exam.description ?? '', instructions: exam.instructions ?? '', durationMinutes: exam.durationMinutes }} busy={locked} readOnly={!editable} submitLabel="Lưu thông tin đề" onSubmit={saveMetadata} /></section>
       <section className="manager-question-list" aria-label="Danh sách câu hỏi"><h2>Câu hỏi ({questions.length})</h2>{questions.length === 0 && <p className="exam-panel">Chưa có câu hỏi. Soạn câu đầu tiên ở bên dưới.</p>}{questions.map((question) => <article className="exam-panel manager-question-card" key={question.id}>
         <h3>Câu {question.position}. {question.content}</h3><ol>{[...question.options].sort((left, right) => left.position - right.position).map((option) => <li key={option.id} className={option.isCorrect ? 'manager-correct-answer' : ''}>{option.content}{option.isCorrect && <span>Đáp án đúng</span>}</li>)}</ol>
-        {editable && <div className="exam-actions"><button className="button button-secondary button-inline" aria-label={`Sửa câu hỏi ${question.position}`} disabled={locked} onClick={() => { setEditing(question); setFeedback(null) }}>Sửa câu hỏi</button><button className="button button-danger button-inline" aria-label={`Xóa câu hỏi ${question.position}`} disabled={locked} onClick={() => setConfirmation({ action: 'deleteQuestion', question })}>Xóa câu hỏi</button></div>}
+        {editable && <div className="exam-actions"><button className="button button-secondary button-inline" aria-label={`Sửa câu hỏi ${question.position}`} disabled={locked} onClick={() => { setEditing(question); clearFeedback() }}>Sửa câu hỏi</button><button className="button button-danger button-inline" aria-label={`Xóa câu hỏi ${question.position}`} disabled={locked} onClick={() => setConfirmation({ action: 'deleteQuestion', question })}>Xóa câu hỏi</button></div>}
       </article>)}</section>
       {editable && <ManagerQuestionForm key={`${editing?.id ?? 'new'}:${nextPosition}`} question={editing ?? undefined} nextPosition={nextPosition} usedPositions={questions.filter((question) => question.id !== editing?.id).map((question) => question.position)} busy={locked} onSave={saveQuestion} onCancel={() => setEditing(null)} />}
       {confirmation && <div className="exam-dialog-backdrop"><section ref={dialog} className="exam-panel exam-confirm" role="dialog" aria-modal="true" aria-labelledby="manager-confirm-title" onKeyDown={(event) => {
