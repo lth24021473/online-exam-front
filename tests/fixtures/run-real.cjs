@@ -12,17 +12,17 @@ function run(script, args) {
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`Command failed with status ${result.status}`);
 }
-let created = false;
+let attempted = false;
 try {
   if (fs.existsSync(manifest)) throw new Error('Previous fixture manifest exists. Clean it before running another test.');
+  attempted = true;
   run(helper, ['create']);
-  created = true;
-  run(path.join(root, 'node_modules/@playwright/test/cli.js'), ['test', 'tests/attempts-real.spec.ts', '--workers=1']);
+  run(path.join(root, 'node_modules/@playwright/test/cli.js'), ['test', 'tests/attempts-real.spec.ts', '--workers=1', '--output=test-results/attempt-real']);
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;
 } finally {
-  if (created) {
+  if (attempted && fs.existsSync(manifest)) {
     try { run(helper, ['cleanup']); }
     catch (error) { console.error('Fixture cleanup failed:', error.message, 'Manifest:', manifest); process.exitCode = 1; }
   }

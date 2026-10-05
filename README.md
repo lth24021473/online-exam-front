@@ -166,6 +166,8 @@ Remove-Item Env:FRONT_REAL_FIXTURE
 Remove-Item Env:REAL_API_E2E
 ```
 
+Các runner kiểm tra API thật chỉ nhận MongoDB ở `localhost` hoặc `127.0.0.1`, không có credentials trong URL. Manifest ghi ID sở hữu trước khi tạo dữ liệu và được giữ lại nếu cleanup thất bại. Cleanup xác minh tài khoản/đề và từ chối xóa khi có dữ liệu ngoài fixture tham chiếu. Output của runner Attempt/ADMIN nằm trong thư mục riêng dưới `test-results/`.
+
 `attempts-real.spec.ts` được bỏ qua khi chạy bộ mock mặc định.
 
 Kiểm tra ADMIN với API/MongoDB thật: `npm run test:e2e:admin-real`. Runner tạo đúng hai tài khoản kiểm thử ADMIN/STUDENT, dùng UI đổi quyền/xóa tài khoản, xác minh JWT cũ bị từ chối kể cả đổi quyền rồi đổi trở lại, và dọn bằng đúng ID. Manifest tạm ở thư mục temp của hệ điều hành, không tạo Docker hoặc thư mục code trung gian. Có thể đặt `FRONT_BACKEND_DIR`, `REAL_DATABASE_URL`, `FRONT_REAL_API_URL`; nếu test bị ngắt, dùng đường dẫn manifest được runner báo và `REAL_API_E2E=1 FRONT_ADMIN_FIXTURE=<manifest>` để chạy `node tests/fixtures/admin-real-api.cjs cleanup`. Bộ test này được bỏ qua khi chạy test mock mặc định. Nếu cần dọn manifest được giữ lại sau sự cố, trong PowerShell:

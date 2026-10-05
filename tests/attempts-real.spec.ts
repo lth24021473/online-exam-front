@@ -79,7 +79,8 @@ test.describe('API thật và dữ liệu kiểm thử riêng', () => {
   test.skip(process.env.REAL_API_E2E !== '1', 'Chỉ chạy khi bật REAL_API_E2E=1 và cung cấp fixture đã tạo riêng.')
 
   test.beforeAll(() => {
-    const fixturePath = process.env.FRONT_REAL_FIXTURE || '.local/real-fixture.json'
+    if (!process.env.FRONT_REAL_FIXTURE) throw new Error('Run npm run test:e2e:real with its dedicated FRONT_REAL_FIXTURE manifest.')
+    const fixturePath = process.env.FRONT_REAL_FIXTURE
     fixture = JSON.parse(readFileSync(fixturePath, 'utf8')) as RealFixture
     if (!fixture.examId || !fixture.email || !fixture.password) throw new Error('Fixture cần có examId, email và password.')
     fixtureHelper = resolve(process.env.FRONT_REAL_FIXTURE_HELPER || 'tests/fixtures/real-api.cjs')
