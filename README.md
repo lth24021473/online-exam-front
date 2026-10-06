@@ -38,13 +38,16 @@ Mở `http://localhost:5173`. Backend cần cho phép CORS với origin này và
 | `/exams/:examId/take` | Bắt đầu / tiếp tục làm bài | STUDENT |
 | `/attempts/:attemptId/result` | Điểm và chi tiết đáp án từ backend | STUDENT |
 | `/history` | Lịch sử, lọc trạng thái và phân trang | STUDENT |
-| `/manage/exams` | Danh sách, tìm/lọc và tạo đề bản nháp | EXAM_MANAGER, ADMIN |
-| `/manage/exams/:examId` | Sửa đề, soạn câu hỏi/đáp án, mở/đóng và xóa đề nháp | Chủ đề EXAM_MANAGER, ADMIN |
+| `/manage/exams` | Danh sách, tìm/lọc và mở trang tạo đề | EXAM_MANAGER, ADMIN |
+| `/manage/exams/create` | Nhập tên, mô tả, thời gian và câu hỏi/đáp án; xác nhận tạo đề bản nháp | EXAM_MANAGER, ADMIN |
+| `/manage/exams/:examId` | Sửa đề nháp, soạn câu hỏi/đáp án, mở/đóng và xóa hẳn đề | Chủ đề EXAM_MANAGER, ADMIN |
 | `/manage/exams/:examId/results` | Kết quả học sinh, lọc trạng thái, phân trang và thống kê điểm | Chủ đề EXAM_MANAGER, ADMIN |
 | `/admin/users` | Danh sách/chi tiết người dùng, đổi vai trò, xóa tài khoản | ADMIN |
 | URL khác | Trang 404 | Công khai |
 
 Trang `/dashboard` có avatar và lời chào, khung gợi ý, minh họa học tập và các tab theo trạng thái. Học viên xem **Đang làm / Hoàn thành / Đã hủy** từ API lịch sử, tiếp tục bài hoặc xem điểm backend. Quản lý đề và ADMIN xem **Đang mở / Bản nháp / Đã đóng** từ API đề thi. Danh sách hỗ trợ phân trang, báo lỗi và thử lại; bố cục thích ứng điện thoại và chế độ tối.
+
+Chọn **Tạo đề thi** trong Quản lý đề để mở `/manage/exams/create`. Form gồm tên đề, mô tả, thời gian làm bài và các câu hỏi ngay bên dưới; mỗi câu có từ 2 đến 20 đáp án và chọn đúng một đáp án đúng. Nút **Tạo đề thi** ở cuối form mở hộp **Bạn chắc chắn muốn tạo đề thi?**. **Hủy** giữ nguyên nội dung, **Xác nhận** lưu đề cùng các câu hỏi rồi mở trang quản lý bản nháp. Đề chỉ được mở cho học sinh khi người quản lý chọn **Mở đề thi**. Nếu lưu câu hỏi thất bại, form giữ nội dung để sửa hoặc thử lại trên cùng bản nháp.
 
 Trang `/profile` mặc định dùng tông màu sáng đồng bộ với trang chủ: ảnh bìa, avatar tròn và bốn tab **Giới thiệu / Lớp học / Nhiệm vụ / Chỉnh sửa tài khoản**. Các nút chọn và xóa ảnh bìa nằm trong tab **Chỉnh sửa tài khoản**; xóa ảnh sẽ trở về ảnh mặc định. Tab hiện tại lưu trong query `?tab=about`, `classes`, `tasks` hoặc `edit`, nên có thể mở trực tiếp và tải lại. Lớp học và Nhiệm vụ hiện là trạng thái chưa có dữ liệu vì backend chưa có API tương ứng. Avatar và ảnh bìa hỗ trợ PNG/JPG/WebP tối đa 2 MB mỗi ảnh; hai ảnh được lưu riêng theo người dùng trên trình duyệt, chưa đồng bộ lên backend.
 
@@ -185,7 +188,9 @@ Khi triển khai production với `BrowserRouter`, cấu hình máy chủ trả 
 
 ## Quản lý đề thi và kết quả pha 1
 
-EXAM_MANAGER/ADMIN mở **Quản lý đề** trên thanh điều hướng. Tạo bản nháp, sửa tiêu đề/mô tả/hướng dẫn/thời gian, thêm/sửa/xóa câu hỏi và các lựa chọn, chọn đúng một đáp án đúng cho mỗi câu. Vị trí câu hỏi không được trùng. Mở đề cần ít nhất một câu, mỗi câu có ít nhất hai lựa chọn có nội dung và đúng một lựa chọn đúng. Nội dung chỉ sửa khi DRAFT; khi mở đề thì khóa để giữ kết quả chấm ổn định. Đóng đề ngăn lượt làm mới và giữ bài đang làm/kết quả. Xóa đề nháp dọn cả câu hỏi/lựa chọn, có xác nhận và khóa gửi lặp.
+EXAM_MANAGER/ADMIN mở **Quản lý đề** trên thanh điều hướng. Tạo bản nháp, sửa tiêu đề/mô tả/hướng dẫn/thời gian, thêm/sửa/xóa câu hỏi và các lựa chọn, chọn đúng một đáp án đúng cho mỗi câu. Vị trí câu hỏi không được trùng. Mở đề cần ít nhất một câu, mỗi câu có ít nhất hai lựa chọn có nội dung và đúng một lựa chọn đúng. Nội dung chỉ sửa khi DRAFT; khi mở đề thì khóa để giữ kết quả chấm ổn định. Đóng đề ngăn lượt làm mới và giữ bài đang làm/kết quả.
+
+Trang chi tiết gom các thao tác cạnh tiêu đề, hiển thị thời gian/số câu ngay phía trên và trình bày thông tin đề đã mở/đóng bằng phần tóm tắt. **Xóa hẳn đề** áp dụng cho mọi trạng thái: hộp xác nhận có **Hủy / Xác nhận xóa đề**, khóa gửi lặp và nêu rõ sẽ xóa vĩnh viễn câu hỏi, đáp án, bài làm và kết quả của đề. Sau khi xóa thành công, quay lại danh sách với thông báo tự tắt sau 1 giây. API phải hỗ trợ xóa toàn bộ dữ liệu liên quan trong một giao dịch và kiểm tra quyền chủ đề/ADMIN.
 
 **Kết quả học sinh** lấy từ `GET /exams/:examId/results?page=1&limit=10&status=SUBMITTED`. Bảng hiển thị học sinh, trạng thái, thời gian, số đúng/sai và điểm backend trả về. Bộ lọc/phân trang áp dụng vào bảng; tổng lượt/đang làm/đã nộp/đã hủy và trung bình/cao nhất/thấp nhất tính trên toàn đề. Chỉ chủ đề hoặc ADMIN truy cập được. Bài hết giờ được backend chốt/chấm trước khi trả kết quả. Mất mạng báo lỗi/thử lại; giao diện hỗ trợ điện thoại và chế độ tối.
 
@@ -195,4 +200,4 @@ Kiểm tra luồng đầy đủ với API và MongoDB Docker hiện có:
 npm run test:e2e:manager-real
 ```
 
-Runner tạo hai tài khoản Manager/STUDENT riêng; UI tạo/sửa đề, thêm/sửa/xóa câu hỏi, mở đề; học sinh làm và nộp bài; Manager xem điểm, lọc trạng thái, đóng đề và xóa một đề nháp có câu hỏi. Manifest ghi ID sở hữu trước khi tạo dữ liệu trong thư mục temp hệ điều hành; cleanup chỉ xóa dữ liệu kiểm thử theo các ID đó, giữ manifest nếu cần dọn lại. Không tạo Docker mới. Test chỉ chạy khi `MANAGER_API_E2E=1`, không chạy trong bộ mock mặc định. Sau sự cố, đặt `MANAGER_API_E2E=1` và `FRONT_MANAGER_FIXTURE` bằng đường dẫn manifest runner đã báo, rồi chạy `node tests/fixtures/manager-real-api.cjs cleanup`.
+Runner tạo hai tài khoản Manager/STUDENT riêng; UI tạo/sửa đề, thêm/sửa/xóa câu hỏi, mở đề; học sinh làm và nộp bài; Manager xem điểm, lọc trạng thái, đóng rồi xóa hẳn đề cùng kết quả, và xóa một đề nháp có câu hỏi. Manifest ghi ID sở hữu trước khi tạo dữ liệu trong thư mục temp hệ điều hành; cleanup chỉ xóa dữ liệu kiểm thử theo các ID đó, giữ manifest nếu cần dọn lại. Không tạo Docker mới. Test chỉ chạy khi `MANAGER_API_E2E=1`, không chạy trong bộ mock mặc định. Sau sự cố, đặt `MANAGER_API_E2E=1` và `FRONT_MANAGER_FIXTURE` bằng đường dẫn manifest runner đã báo, rồi chạy `node tests/fixtures/manager-real-api.cjs cleanup`.

@@ -1,0 +1,23 @@
+.manager-create-form > fieldset { gap: 24px; }
+.manager-create-fields, .manager-create-questions { display: grid; gap: 18px; min-width: 0; }
+.manager-create-field { display: grid; gap: 8px; min-width: 0; }
+.manager-create-metadata h2 { margin-bottom: 20px; }
+.manager-create-section-heading h2 { margin-bottom: 8px; }
+.manager-create-section-heading p { margin: 0; color: var(--text-muted); font-size: 14px; }
+.manager-create-question { display: grid; gap: 18px; }
+.manager-create-question-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.manager-create-question-heading h3 { margin: 0; font-size: 18px; }
+.manager-create-remove { display: inline-flex; align-items: center; justify-content: center; gap: 7px; color: var(--error-text); white-space: nowrap; }
+.manager-create-form .manager-create-add-option, .manager-create-form .manager-create-add-question { justify-self: start; }
+.manager-create-option-correct .manager-option-input input { border-color: var(--accent); background: var(--surface-highlight); }
+.manager-create-form [aria-invalid='true'] { border-color: var(--error-text); }
+.manager-create-footer { display: grid; gap: 16px; border-top: 1px solid var(--border); padding-top: 24px; }
+.manager-create-footer > .button { justify-self: end; }
+.manager-create-dialog-backdrop .manager-create-confirm { width: min(440px, 100%); box-sizing: border-box; }
+.manager-create-confirm h2 { margin-bottom: 0; font-size: 21px; line-height: 1.5; }
+.manager-create-confirm .exam-actions { justify-content: flex-end; }
+@media (max-width: 680px) {
+  .manager-create-question-heading { gap: 8px; align-items: start; }
+  .manager-create-remove { padding-left: 0; padding-right: 0; font-size: 13px; }
+  .manager-create-footer > .button { width: 100%; justify-content: center; }
+}

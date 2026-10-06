@@ -97,6 +97,7 @@ const studentRoutes = [
 ]
 const managerRoutes = [
   ['/manage/exams', 'Quản lý đề thi'],
+  ['/manage/exams/create', 'Tạo đề thi'],
   ['/manage/exams/' + examId, exam.title],
   ['/manage/exams/' + examId + '/results', 'Kết quả học sinh'],
 ]
@@ -104,6 +105,7 @@ const managerRoutes = [
 for (const role of ['STUDENT', 'EXAM_MANAGER', 'ADMIN'] as const) {
   for (const width of [1920, 320]) {
     test(`${role} pages share homepage header, navigation and content geometry at ${width}px`, async ({ page }) => {
+      test.setTimeout(60_000)
       const unexpected = await mockApi(page, role)
       await page.setViewportSize({ width, height: 1080 })
       await page.goto('/dashboard')

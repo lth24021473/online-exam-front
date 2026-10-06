@@ -57,6 +57,8 @@ export function getManagerErrorMessage(error: unknown): string {
       'You do not own this exam': 'Bạn chưa có quyền quản lý đề thi này.',
       'Only DRAFT exams can be modified': 'Chỉ có thể chỉnh sửa đề thi bản nháp.',
       'Only DRAFT exams can be deleted': 'Chỉ có thể xóa đề thi bản nháp.',
+      'Exam content is referenced by another exam attempt': 'Không thể xóa vì bài làm của đề khác đang tham chiếu đến nội dung đề này. Hãy kiểm tra dữ liệu trước khi xóa.',
+      'Exam changed concurrently. Please retry the operation': 'Đề thi đang được cập nhật đồng thời. Vui lòng thử lại thao tác.',
       'Only DRAFT exams can be published': 'Chỉ có thể mở đề thi bản nháp.',
       'Only PUBLISHED exams can be closed': 'Chỉ có thể đóng đề thi đang mở.',
       'Exam must have at least one question before publishing': 'Hãy thêm ít nhất một câu hỏi trước khi mở đề.',

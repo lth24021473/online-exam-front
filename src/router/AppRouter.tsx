@@ -13,6 +13,7 @@ import ProtectedRoute from './ProtectedRoute'
 import StudentRoute from './StudentRoute'
 import ManagerRoute from './ManagerRoute'
 import ManagerExamsPage from '../pages/ManagerExamsPage'
+import ManagerCreateExamPage from '../pages/ManagerCreateExamPage'
 import ManagerExamDetailPage from '../pages/ManagerExamDetailPage'
 import ManagerExamResultsPage from '../pages/ManagerExamResultsPage'
 import AdminRoute from './AdminRoute'
@@ -43,6 +44,7 @@ export default function AppRouter() {
           <Route path="exams/:examId" element={<ExamDetailPage />} />
           <Route element={<ManagerRoute />}>
             <Route path="manage/exams" element={<ManagerExamsPage />} />
+            <Route path="manage/exams/create" element={<ManagerCreateExamPage />} />
             <Route path="manage/exams/:examId" element={<ManagerExamDetailPage />} />
             <Route path="manage/exams/:examId/results" element={<ManagerExamResultsPage />} />
           </Route>

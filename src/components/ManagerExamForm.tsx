@@ -18,12 +18,12 @@ export default function ManagerExamForm({ initial, busy, readOnly = false, submi
     if (!Number.isSafeInteger(durationMinutes) || durationMinutes < 1) { setError('Thời gian phải là số nguyên từ 1 phút.'); return }
     await onSubmit({ title: title.trim(), description: description.trim(), instructions: instructions.trim(), durationMinutes })
   }
-  return <form noValidate className="manager-form" aria-label={submitLabel === 'Lưu đề mới' ? 'Tạo đề thi' : 'Thông tin đề thi'} aria-busy={busy} onSubmit={(event) => { void submit(event) }}>
+  return <form noValidate className="manager-form manager-metadata-form" aria-label="Thông tin đề thi" aria-busy={busy} onSubmit={(event) => { void submit(event) }}>
     <fieldset disabled={busy || readOnly}>
       <label>Tên đề thi<input value={title} maxLength={200} required onChange={(event) => setTitle(event.target.value)} /></label>
-      <label>Mô tả<textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
-      <label>Hướng dẫn<textarea rows={3} value={instructions} onChange={(event) => setInstructions(event.target.value)} /></label>
       <label>Thời gian (phút)<input type="number" min={1} step={1} required value={minutes} onChange={(event) => setMinutes(event.target.value)} /></label>
+      <label>Mô tả<textarea rows={2} value={description} onChange={(event) => setDescription(event.target.value)} /></label>
+      <label>Hướng dẫn<textarea rows={2} value={instructions} onChange={(event) => setInstructions(event.target.value)} /></label>
       {error && <p className="form-error" role="alert">{error}</p>}
       {!readOnly && <button className="button button-primary button-inline" type="submit">{busy ? 'Đang lưu…' : submitLabel}</button>}
     </fieldset>

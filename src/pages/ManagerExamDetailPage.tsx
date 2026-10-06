@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, BarChart3, Clock3, ListChecks, RefreshCw, Trash2 } from 'lucide-react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { examStatusLabels, getManagerErrorMessage, managerExamsApi } from '../api/manager-exams'
 import type { ExamPayload, ManagerExam, ManagerQuestion, QuestionPayload } from '../api/manager-exams'
@@ -7,12 +7,13 @@ import ManagerExamForm from '../components/ManagerExamForm'
 import ManagerQuestionForm from '../components/ManagerQuestionForm'
 import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
 import './ManagerExams.css'
+import './ManagerExamDetailPage.css'
 
 type Confirmation = { action: 'publish' | 'close' | 'deleteExam' | 'deleteQuestion'; question?: ManagerQuestion }
 const confirmLabels = {
   publish: { title: 'Mở đề thi?', button: 'Xác nhận mở đề', description: 'Học sinh có thể bắt đầu làm bài. Sau khi mở, nội dung đề và đáp án sẽ được khóa.' },
   close: { title: 'Đóng đề thi?', button: 'Xác nhận đóng đề', description: 'Học sinh không thể bắt đầu lượt mới. Các bài đang làm và kết quả vẫn được giữ.' },
-  deleteExam: { title: 'Xóa đề thi bản nháp?', button: 'Xác nhận xóa đề', description: 'Đề thi và toàn bộ câu hỏi sẽ bị xóa. Thao tác này không thể hoàn tác.' },
+  deleteExam: { title: 'Xóa hẳn đề thi?', button: 'Xác nhận xóa đề', description: 'Đề thi, câu hỏi, đáp án và toàn bộ bài làm, kết quả học sinh của đề này sẽ bị xóa vĩnh viễn. Thao tác này không thể hoàn tác.' },
   deleteQuestion: { title: 'Xóa câu hỏi?', button: 'Xác nhận xóa câu hỏi', description: 'Câu hỏi và các đáp án sẽ bị xóa khỏi đề bản nháp.' },
 }
 export default function ManagerExamDetailPage() {
@@ -44,9 +45,17 @@ function ManagerExamDetailContent({ examId }: { examId: string }) {
   useEffect(() => {
     if (!confirmation) return
     const previous = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     cancelButton.current?.focus()
-    return () => { if (previous instanceof HTMLElement && previous.isConnected) previous.focus() }
+    return () => {
+      document.body.style.overflow = previousOverflow
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus()
+    }
   }, [confirmation])
+  useEffect(() => {
+    if (confirmation && busy) dialog.current?.focus()
+  }, [confirmation, busy])
   const current = loaded?.id === examId ? loaded : null
   const exam = current?.exam
   const questions = [...(exam?.questions ?? [])].sort((left, right) => left.position - right.position)
@@ -85,7 +94,7 @@ function ManagerExamDetailContent({ examId }: { examId: string }) {
     await mutate(async () => {
       if (confirmation.action === 'deleteExam') {
         await managerExamsApi.remove(examId)
-        navigate('/manage/exams', { replace: true, state: { notice: 'Đã xóa đề thi.' } }); return
+        navigate('/manage/exams', { replace: true, state: { notice: 'Đã xóa hẳn đề thi.' } }); return
       }
       if (confirmation.action === 'deleteQuestion' && confirmation.question) {
         await managerExamsApi.removeQuestion(examId, confirmation.question.id)
@@ -100,35 +109,45 @@ function ManagerExamDetailContent({ examId }: { examId: string }) {
     })
   }
   function refresh() { setLoaded(null); clearFeedback(); setEditing(null); setRevision((value) => value + 1) }
-  return <div className="exam-page manager-page">
+  return <div className="exam-page manager-page manager-detail-page">
+    <div className="manager-detail-content" inert={Boolean(confirmation)}>
     <Link className="exam-back-link" to="/manage/exams"><ArrowLeft size={17} aria-hidden="true" />Quản lý đề thi</Link>
     {notice && <p className="form-success" role="status">{notice}</p>}
     {!current ? <p className="exam-panel" role="status">Đang tải đề thi…</p> : current.error ? <section className="exam-panel"><p className="form-error" role="alert">{current.error}</p><button className="button button-primary button-inline" onClick={refresh}>Thử lại</button></section> : exam && <>
-      <header className="exam-page-heading"><div><span className="exam-badge">{examStatusLabels[exam.status]}</span><h1>{exam.title}</h1><p>Mã đề: <span className="manager-exam-code">{exam.id}</span></p></div><Link className="button button-secondary button-inline" to={`/manage/exams/${examId}/results`}>Kết quả học sinh</Link></header>
+      <header className="exam-page-heading manager-detail-heading">
+        <div className="manager-detail-title">
+          <div className="manager-detail-meta"><span className="exam-badge">{examStatusLabels[exam.status]}</span><span><Clock3 size={16} aria-hidden="true" />{exam.durationMinutes} phút</span><span><ListChecks size={16} aria-hidden="true" />{questions.length} câu hỏi</span></div>
+          <h1>{exam.title}</h1><p className="manager-detail-code">Mã đề: <span className="manager-exam-code">{exam.id}</span></p>
+        </div>
+        <div className="exam-actions manager-status-actions manager-detail-actions" role="group" aria-label="Thao tác đề thi">
+          {editable && <button className="button button-primary button-inline" disabled={locked || !publishable} onClick={() => setConfirmation({ action: 'publish' })}>Mở đề thi</button>}
+          {exam.status === 'PUBLISHED' && <button className="button button-primary button-inline" disabled={locked} onClick={() => setConfirmation({ action: 'close' })}>Đóng đề thi</button>}
+          <Link className="button button-secondary button-inline" to={`/manage/exams/${examId}/results`}><BarChart3 size={16} aria-hidden="true" />Kết quả học sinh</Link>
+          <button className="button button-secondary button-inline" disabled={locked} onClick={refresh}><RefreshCw size={16} aria-hidden="true" />Tải lại đề</button>
+          <button className="button button-danger button-inline" disabled={locked} onClick={() => setConfirmation({ action: 'deleteExam' })}><Trash2 size={16} aria-hidden="true" />Xóa hẳn đề</button>
+        </div>
+      </header>
       {error && <p className="form-error" role="alert">{error}</p>}
-      <div className="exam-actions manager-status-actions">
-        {editable && <button className="button button-primary button-inline" disabled={locked || !publishable} onClick={() => setConfirmation({ action: 'publish' })}>Mở đề thi</button>}
-        {exam.status === 'PUBLISHED' && <button className="button button-primary button-inline" disabled={locked} onClick={() => setConfirmation({ action: 'close' })}>Đóng đề thi</button>}
-        {editable && <button className="button button-danger button-inline" disabled={locked} onClick={() => setConfirmation({ action: 'deleteExam' })}>Xóa đề thi</button>}
-        <button className="button button-secondary button-inline" disabled={locked} onClick={refresh}>Tải lại đề</button>
-      </div>
       {editable && !publishable && <p className="exam-muted">Thêm ít nhất một câu hỏi hợp lệ, với ít nhất hai đáp án và một đáp án đúng, để mở đề thi.</p>}
-      {!editable && <p className="manager-readonly-note">Nội dung đã được khóa sau khi mở đề. Bạn có thể xem câu hỏi và kết quả học sinh.</p>}
-      <section className="exam-panel"><h2>Thông tin đề thi</h2><ManagerExamForm key={exam.id} initial={{ title: exam.title, description: exam.description ?? '', instructions: exam.instructions ?? '', durationMinutes: exam.durationMinutes }} busy={locked} readOnly={!editable} submitLabel="Lưu thông tin đề" onSubmit={saveMetadata} /></section>
+      <section className="exam-panel manager-detail-info" aria-labelledby="manager-info-title">
+        <div className="manager-info-heading"><h2 id="manager-info-title">Thông tin đề thi</h2>{!editable && <span className="exam-muted">Nội dung đã khóa chỉnh sửa.</span>}</div>
+        {editable ? <ManagerExamForm key={exam.id} initial={{ title: exam.title, description: exam.description ?? '', instructions: exam.instructions ?? '', durationMinutes: exam.durationMinutes }} busy={locked} submitLabel="Lưu thông tin đề" onSubmit={saveMetadata} /> : <dl className="manager-metadata-summary"><div><dt>Mô tả</dt><dd>{exam.description || 'Chưa có mô tả.'}</dd></div>{exam.instructions && <div><dt>Hướng dẫn</dt><dd>{exam.instructions}</dd></div>}</dl>}
+      </section>
       <section className="manager-question-list" aria-label="Danh sách câu hỏi"><h2>Câu hỏi ({questions.length})</h2>{questions.length === 0 && <p className="exam-panel">Chưa có câu hỏi. Soạn câu đầu tiên ở bên dưới.</p>}{questions.map((question) => <article className="exam-panel manager-question-card" key={question.id}>
         <h3>Câu {question.position}. {question.content}</h3><ol>{[...question.options].sort((left, right) => left.position - right.position).map((option) => <li key={option.id} className={option.isCorrect ? 'manager-correct-answer' : ''}>{option.content}{option.isCorrect && <span>Đáp án đúng</span>}</li>)}</ol>
         {editable && <div className="exam-actions"><button className="button button-secondary button-inline" aria-label={`Sửa câu hỏi ${question.position}`} disabled={locked} onClick={() => { setEditing(question); clearFeedback() }}>Sửa câu hỏi</button><button className="button button-danger button-inline" aria-label={`Xóa câu hỏi ${question.position}`} disabled={locked} onClick={() => setConfirmation({ action: 'deleteQuestion', question })}>Xóa câu hỏi</button></div>}
       </article>)}</section>
       {editable && <ManagerQuestionForm key={`${editing?.id ?? 'new'}:${nextPosition}`} question={editing ?? undefined} nextPosition={nextPosition} usedPositions={questions.filter((question) => question.id !== editing?.id).map((question) => question.position)} busy={locked} onSave={saveQuestion} onCancel={() => setEditing(null)} />}
-      {confirmation && <div className="exam-dialog-backdrop"><section ref={dialog} className="exam-panel exam-confirm" role="dialog" aria-modal="true" aria-labelledby="manager-confirm-title" onKeyDown={(event) => {
+    </>}
+    </div>
+      {confirmation && <div className="exam-dialog-backdrop"><section ref={dialog} tabIndex={-1} className="exam-panel exam-confirm" role="dialog" aria-modal="true" aria-labelledby="manager-confirm-title" aria-describedby="manager-confirm-description" aria-busy={busy} onKeyDown={(event) => {
         if (event.key === 'Escape' && !busy) setConfirmation(null)
         if (event.key !== 'Tab') return
         const buttons = dialog.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
-        if (!buttons?.length) return
+        if (!buttons?.length) { event.preventDefault(); return }
         const first = buttons[0]; const last = buttons[buttons.length - 1]
         if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
         else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
-      }}><h2 id="manager-confirm-title">{confirmLabels[confirmation.action].title}</h2><p>{confirmLabels[confirmation.action].description}</p>{confirmation.question && <p>Câu {confirmation.question.position}: {confirmation.question.content}</p>}<div className="exam-actions"><button ref={cancelButton} className="button button-secondary button-inline" disabled={busy} onClick={() => setConfirmation(null)}>Hủy</button><button className="button button-primary button-inline" disabled={busy} onClick={() => { void confirmAction() }}>{busy ? 'Đang xử lý…' : confirmLabels[confirmation.action].button}</button></div></section></div>}
-    </>}
+      }}><h2 id="manager-confirm-title">{confirmLabels[confirmation.action].title}</h2><p id="manager-confirm-description">{confirmLabels[confirmation.action].description}</p>{confirmation.action === 'deleteExam' && exam && <p className="manager-delete-title">{exam.title}</p>}{confirmation.question && <p>Câu {confirmation.question.position}: {confirmation.question.content}</p>}<div className="exam-actions"><button ref={cancelButton} className="button button-secondary button-inline" disabled={busy} onClick={() => setConfirmation(null)}>Hủy</button><button className={`button button-inline ${confirmation.action === 'deleteExam' || confirmation.action === 'deleteQuestion' ? 'button-danger' : 'button-primary'}`} disabled={busy} onClick={() => { void confirmAction() }}>{busy ? 'Đang xử lý…' : confirmLabels[confirmation.action].button}</button></div></section></div>}
   </div>
 }

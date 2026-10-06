@@ -25,24 +25,31 @@ async function question(page: Page, content: string, position: number, correctIn
   await page.getByRole('button', { name: 'Lưu câu hỏi', exact: true }).click()
   await expect(page.getByRole('heading').filter({ hasText: content })).toBeVisible()
 }
+async function createWithQuestion(page: Page, content: string, correctIndex: number) {
+  const question = page.getByRole('group', { name: 'Câu hỏi 1', exact: true })
+  await question.getByLabel('Nội dung câu hỏi', { exact: true }).fill(content)
+  for (let i = 1; i <= 4; i++) await question.getByLabel('Đáp án ' + i, { exact: true }).fill('Lựa chọn ' + i)
+  await question.getByRole('radio', { name: 'Đáp án đúng ' + (correctIndex + 1), exact: true }).check()
+  await page.getByRole('button', { name: 'Tạo đề thi', exact: true }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận', exact: true }).click()
+}
 test.use({ actionTimeout: 15_000 })
 
 test.describe('Manager → học sinh → kết quả với API và MongoDB thật', () => {
   test.skip(process.env.MANAGER_API_E2E !== '1', 'Run test:e2e:manager-real with owned temporary fixtures.')
-  test('soạn/sửa/xóa câu hỏi, mở đề, làm bài, xem điểm và đóng đề', async ({ page, browser }) => {
+  test('soạn/sửa/xóa câu hỏi, mở đề, làm bài, xem điểm, đóng và xóa hẳn đề', async ({ page, browser }) => {
     test.setTimeout(120_000)
     const fixture = JSON.parse(readFileSync(process.env.FRONT_MANAGER_FIXTURE!, 'utf8')) as Fixture
     await login(page, fixture.manager.email, fixture.password)
     await page.getByRole('link', { name: 'Quản lý đề', exact: true }).click()
-    await page.getByRole('button', { name: 'Tạo đề thi', exact: true }).click()
+    await page.getByRole('link', { name: 'Tạo đề thi', exact: true }).click()
     await page.getByLabel('Tên đề thi', { exact: true }).fill(fixture.title)
-    await page.getByLabel('Thời gian (phút)', { exact: true }).fill('15')
-    await page.getByRole('button', { name: 'Lưu đề mới', exact: true }).click()
+    await page.getByLabel('Thời gian làm bài (phút)', { exact: true }).fill('15')
+    await createWithQuestion(page, 'Câu kiểm thử thứ nhất', 1)
     await expect(page).toHaveURL(/\/manage\/exams\/[a-f\d]{24}$/)
     const examId = new URL(page.url()).pathname.split('/').pop()!
     await page.getByLabel('Mô tả', { exact: true }).fill('Đề tạo và hoàn thành qua giao diện thật')
     await page.getByRole('button', { name: 'Lưu thông tin đề', exact: true }).click()
-    await question(page, 'Câu kiểm thử thứ nhất', 1, 1)
     await question(page, 'Câu kiểm thử thứ hai', 2, 0)
     await question(page, 'Câu sẽ xóa', 3, 0)
     await page.getByRole('button', { name: 'Sửa câu hỏi 3', exact: true }).click()
@@ -56,6 +63,8 @@ test.describe('Manager → học sinh → kết quả với API và MongoDB th�
     await page.getByRole('button', { name: 'Xác nhận mở đề', exact: true }).click()
     await expect(page.getByRole('button', { name: 'Đóng đề thi', exact: true })).toBeVisible()
 
+    let submittedAttemptId!: string
+    let submittedStudentToken!: string | null
     const studentContext = await browser.newContext()
     try {
       const student = await studentContext.newPage()
@@ -64,6 +73,7 @@ test.describe('Manager → học sinh → kết quả với API và MongoDB th�
       const started = student.waitForResponse((r) => apiResponse(r, 'POST', '/exams/' + examId + '/attempts'))
       await student.getByRole('link', { name: 'Bắt đầu / Tiếp tục bài', exact: true }).click()
       const session = await (await started).json() as { attempt: { id: string }; questions: { id: string; content: string; options: string[] }[] }
+      submittedAttemptId = session.attempt.id
       expect(session.questions).toHaveLength(2)
       for (let i = 0; i < 2; i++) {
         await student.getByRole('button', { name: new RegExp('^Câu ' + (i + 1) + ',') }).click()
@@ -82,6 +92,7 @@ test.describe('Manager → học sinh → kết quả với API và MongoDB th�
       expect(result.summary.incorrectCount).toBe(1)
       await expect(student.getByLabel('Điểm bài thi', { exact: true }).locator('strong')).toHaveText('5 / 10')
       const studentToken = await student.evaluate(() => localStorage.getItem('online-exam.access-token'))
+      submittedStudentToken = studentToken
       const denied = await studentContext.request.get(fixture.apiUrl + '/exams/' + examId + '/results', { headers: { Authorization: 'Bearer ' + studentToken } })
       expect(denied.status()).toBe(403)
       const repeated = await studentContext.request.post(fixture.apiUrl + '/attempts/' + session.attempt.id + '/submit', { headers: { Authorization: 'Bearer ' + studentToken } })
@@ -128,15 +139,23 @@ test.describe('Manager → học sinh → kết quả với API và MongoDB th�
     const detail = await page.request.get(fixture.apiUrl + '/exams/' + examId, { headers: { Authorization: 'Bearer ' + managerToken } })
     expect((await detail.json()).status).toBe('CLOSED')
 
+    // Permanent deletion also removes the fixture's closed exam and its graded attempt.
+    await page.getByRole('button', { name: 'Xóa hẳn đề', exact: true }).click()
+    await page.getByRole('dialog', { name: 'Xóa hẳn đề thi?', exact: true }).getByRole('button', { name: 'Xác nhận xóa đề', exact: true }).click()
+    await expect(page).toHaveURL('/manage/exams')
+    const deletedClosedExam = await page.request.get(fixture.apiUrl + '/exams/' + examId, { headers: { Authorization: 'Bearer ' + managerToken } })
+    expect(deletedClosedExam.status()).toBe(404)
+    const deletedResult = await page.request.get(fixture.apiUrl + '/attempts/' + submittedAttemptId + '/result', { headers: { Authorization: 'Bearer ' + submittedStudentToken } })
+    expect(deletedResult.status()).toBe(404)
+
     // A draft with dependent questions must be removable through the UI.
     await page.goto('/manage/exams')
-    await page.getByRole('button', { name: 'Tạo đề thi', exact: true }).click()
+    await page.getByRole('link', { name: 'Tạo đề thi', exact: true }).click()
     await page.getByLabel('Tên đề thi', { exact: true }).fill(fixture.title + ' nháp xóa')
-    await page.getByRole('button', { name: 'Lưu đề mới', exact: true }).click()
+    await createWithQuestion(page, 'Câu nháp xóa cùng đề', 0)
     await expect(page).toHaveURL(/\/manage\/exams\/[a-f\d]{24}$/)
     const draftId = new URL(page.url()).pathname.split('/').pop()!
-    await question(page, 'Câu nháp xóa cùng đề', 1, 0)
-    await page.getByRole('button', { name: 'Xóa đề thi', exact: true }).click()
+    await page.getByRole('button', { name: 'Xóa hẳn đề', exact: true }).click()
     await page.getByRole('button', { name: 'Xác nhận xóa đề', exact: true }).click()
     await expect(page).toHaveURL('/manage/exams')
     const deleted = await page.request.get(fixture.apiUrl + '/exams/' + draftId, { headers: { Authorization: 'Bearer ' + managerToken } })
