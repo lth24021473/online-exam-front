@@ -1,0 +1,256 @@
+/* ManagerClassesPage.css */
+.manager-classes-page {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+
+.manager-classes-page .exam-page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.manager-classes-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  box-shadow: 3px 3px 0px 0px var(--border);
+  padding: 16px;
+  border-radius: 2px;
+}
+
+.manager-classes-search {
+  flex: 1 1 260px;
+  display: grid;
+  gap: 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.manager-classes-search input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  outline: none;
+}
+
+.manager-classes-search input:focus {
+  box-shadow: 2px 2px 0px 0px var(--border);
+}
+
+.manager-classes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.manager-class-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0px 0px var(--border);
+  border-radius: 2px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.manager-class-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.manager-class-card-header h2 {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.manager-class-card-desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.manager-class-creds-box {
+  background: var(--surface-muted);
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.manager-class-cred-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.manager-class-cred-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.manager-class-code-badge {
+  font-family: monospace;
+  font-weight: 800;
+  font-size: 13px;
+  background: #ffcc00;
+  color: #1a1a1a;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+}
+
+.manager-class-password-val {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text-primary);
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+
+.manager-class-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.manager-class-stat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manager-class-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 2px dashed var(--border-soft);
+}
+
+.manager-class-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.manager-class-actions .button {
+  font-size: 13px;
+  min-height: 40px;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+/* Modal styles */
+.manager-class-modal {
+  width: min(520px, 100%);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  box-shadow: 6px 6px 0px 0px var(--border);
+  border-radius: 2px;
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.manager-class-modal h2 {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.manager-class-form-fields {
+  display: grid;
+  gap: 14px;
+}
+
+.manager-class-field {
+  display: grid;
+  gap: 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.manager-class-field input,
+.manager-class-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  outline: none;
+}
+
+.manager-class-field input:focus,
+.manager-class-field textarea:focus {
+  box-shadow: 2px 2px 0px 0px var(--border);
+}
+
+.manager-class-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.manager-class-delete-warning {
+  background: #fff3f2;
+  border: 2px solid #e63b2e;
+  border-radius: 2px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #900;
+}

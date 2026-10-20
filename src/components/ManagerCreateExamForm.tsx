@@ -17,10 +17,11 @@ interface DraftQuestion {
 }
 interface ValidationError { fieldId: string; message: string }
 
-export default function ManagerCreateExamForm({ busy, error, creationBlocked = false, onCreate }: {
+export default function ManagerCreateExamForm({ busy, error, creationBlocked = false, classroomId, onCreate }: {
   busy: boolean
   error: string
   creationBlocked?: boolean
+  classroomId?: string
   onCreate: (payload: ManagerCreateExamPayload) => Promise<void>
 }) {
   const formId = useId()
@@ -135,6 +136,7 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
       description: description.trim(),
       instructions: '',
       durationMinutes,
+      ...(classroomId ? { classroomId } : {}),
       ...(opensAt ? { opensAt: new Date(opensAt).toISOString() } : {}),
       ...(closesAt ? { closesAt: new Date(closesAt).toISOString() } : {}),
       ...(attempts > 1 ? { maxAttempts: attempts } : {}),
@@ -185,6 +187,7 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
       <fieldset disabled={locked || Boolean(confirmation)}>
         <section className="exam-panel manager-create-metadata" aria-labelledby={`${formId}-metadata-title`}>
           <h2 id={`${formId}-metadata-title`}>Thông tin đề thi</h2>
+          {classroomId && <p className="exam-badge" style={{ display: 'inline-block', marginBottom: '12px' }}>Đề thi được tạo cho lớp học này.</p>}
           <div className="manager-create-fields">
             <div className="manager-create-field"><label htmlFor={titleId}>Tên đề thi</label><input id={titleId} required maxLength={200} value={title} {...fieldError(titleId)} onChange={(event) => { setTitle(event.target.value); setValidation(null) }} /></div>
             <div className="manager-create-field"><label htmlFor={`${formId}-description`}>Mô tả</label><textarea id={`${formId}-description`} rows={3} value={description} onChange={(event) => setDescription(event.target.value)} /></div>
