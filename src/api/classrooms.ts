@@ -119,21 +119,28 @@ export function getClassroomErrorMessage(error: unknown): string {
   if (axios.isAxiosError<{ message?: string | string[] }>(error)) {
     const messages: Record<string, string> = {
       'Classroom not found': 'Không tìm thấy lớp học này.',
+      'Mã lớp không tồn tại': 'Mã lớp không tồn tại.',
       'Classroom code already exists': 'Mã lớp này đã tồn tại. Vui lòng thử lại.',
       'Wrong classroom password': 'Mật khẩu lớp học không chính xác.',
+      'Mật khẩu lớp không chính xác': 'Mật khẩu lớp học không chính xác.',
       'You have already joined this classroom': 'Bạn đã tham gia lớp học này rồi.',
+      'Bạn đã tham gia lớp học này rồi': 'Bạn đã tham gia lớp học này rồi.',
       'You cannot join your own classroom': 'Bạn là giáo viên quản lý lớp này, không thể tham gia như học sinh.',
       'You do not have access to this classroom': 'Bạn không có quyền truy cập lớp học này.',
       'Only classroom manager or admin can remove members': 'Chỉ giáo viên quản lý lớp hoặc quản trị viên mới có quyền xóa học sinh.',
       'Cannot remove manager from classroom': 'Không thể xóa giáo viên quản lý khỏi lớp học.',
       'Member not found in classroom': 'Học sinh không thuộc lớp học này.',
       'Cannot delete classroom with existing exams or attempts': 'Không thể xóa lớp học đã có đề thi hoặc bài làm.',
+      'Không thể xóa lớp học đã có đề thi hoặc bài làm': 'Không thể xóa lớp học đã có đề thi hoặc bài làm.',
       'You do not manage this classroom': 'Bạn không có quyền quản lý lớp học này.',
       'Only classroom manager or admin can delete classroom': 'Chỉ giáo viên quản lý lớp hoặc quản trị viên mới có quyền xóa lớp.',
     }
     const message = error.response?.data?.message
     const primary = Array.isArray(message) ? message[0] : message
-    if (typeof primary === 'string' && messages[primary]) return messages[primary]
+    if (typeof primary === 'string') {
+      if (messages[primary]) return messages[primary]
+      if (/[à-ỹÀ-Ỹ]/.test(primary)) return primary
+    }
     if (error.response?.status === 404) return 'Không tìm thấy lớp học này.'
     if (error.response?.status === 403) return 'Bạn không có quyền thực hiện thao tác này.'
     if (error.response?.status === 409) return typeof primary === 'string' ? primary : 'Dữ liệu bị xung đột. Vui lòng thử lại.'
