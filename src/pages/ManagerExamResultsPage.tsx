@@ -34,6 +34,41 @@ export default function ManagerExamResultsPage() {
       <section className="manager-result-summary" aria-label="Thống kê toàn bộ đề thi">
         <div><span>Tổng lượt làm bài</span><strong>{data.summary.totalAttempts}</strong></div><div><span>Đã nộp</span><strong>{data.summary.submittedCount}</strong></div><div><span>Đang làm / Đã hủy</span><strong>{data.summary.inProgressCount} / {data.summary.cancelledCount}</strong></div><div><span>Điểm trung bình</span><strong>{formatScore(data.summary.averageScore)}</strong></div><div><span>Cao nhất / Thấp nhất</span><strong>{formatScore(data.summary.highestScore)} / {formatScore(data.summary.lowestScore)}</strong></div>
       </section>
+
+      {data.leaderboard && data.leaderboard.length > 0 && (
+        <section className="exam-panel manager-leaderboard-panel" aria-label="Bảng xếp hạng điểm cao nhất">
+          <h2>BẢNG XẾP HẠNG (ĐIỂM CAO NHẤT CỦA MỖI HỌC VIÊN)</h2>
+          <p className="exam-muted">Mỗi học sinh được ghi nhận bằng lần làm bài có kết quả cao nhất.</p>
+          <div className="manager-leaderboard-grid">
+            {data.leaderboard.map((item) => (
+              <div key={item.userId} className="manager-leaderboard-card">
+                <div className="manager-leaderboard-rank">
+                  <span className={`manager-rank-badge rank-${item.rank}`}>#{item.rank}</span>
+                </div>
+                <div className="manager-leaderboard-info">
+                  <strong>{item.fullName}</strong>
+                  <span className="manager-student-email">{item.email}</span>
+                </div>
+                <div className="manager-leaderboard-stats">
+                  <div>
+                    <span className="leaderboard-label">Điểm cao nhất:</span>
+                    <strong className="leaderboard-score">{formatScore(item.bestScore)} / 10</strong>
+                  </div>
+                  <div>
+                    <span className="leaderboard-label">Thời gian làm:</span>
+                    <span>{Math.floor(item.durationSeconds / 60)}p {item.durationSeconds % 60}s</span>
+                  </div>
+                  <div>
+                    <span className="leaderboard-label">Nộp lúc:</span>
+                    <span>{formatDate(item.submittedAt)}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <p className="exam-muted">Thống kê áp dụng cho toàn bộ đề thi. Danh sách bên dưới áp dụng bộ lọc trạng thái.</p>
       {data.data.length === 0 ? <section className="exam-panel"><h2>Chưa có bài làm phù hợp</h2><p>Kết quả xuất hiện khi học sinh bắt đầu làm đề thi này.</p></section> : <div className="manager-results-scroll" tabIndex={0} aria-label="Bảng kết quả học sinh"><table className="manager-results-table"><thead><tr><th scope="col">Học sinh</th><th scope="col">Trạng thái</th><th scope="col">Điểm</th><th scope="col">Đúng / Tổng câu</th><th scope="col">Bắt đầu</th><th scope="col">Nộp / Hủy</th></tr></thead><tbody>{data.data.map((attempt) => <tr key={attempt.id}><td><strong>{attempt.user.fullName}</strong><span className="manager-student-email">{attempt.user.email}</span></td><td>{attemptStatusLabels[attempt.status]}</td><td>{attempt.status === 'SUBMITTED' ? `${formatScore(attempt.score)} / 10` : '—'}</td><td>{attempt.correctCount ?? '—'} / {attempt.totalQuestions}</td><td>{formatDate(attempt.startedAt)}</td><td>{formatDate(attempt.submittedAt ?? attempt.cancelledAt)}</td></tr>)}</tbody></table></div>}
       <nav className="exam-pagination" aria-label="Phân trang kết quả học sinh"><button disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>Trang trước</button><span>Trang {data.meta.page} / {Math.max(1, data.meta.totalPages)} · {data.meta.total} lượt</span><button disabled={page >= data.meta.totalPages} onClick={() => setPage((value) => value + 1)}>Trang sau</button></nav>

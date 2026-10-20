@@ -47,6 +47,9 @@ const test = base.extend<{ api: ProfileApi }>({
       if (key === 'GET /users/me') {
         expect(request.headers().authorization).toBe(`Bearer ${token}`)
         await route.fulfill({ status: 200, json: { ...user, fullName } })
+      } else if (key === 'PATCH /users/me') {
+        expect(request.headers().authorization).toBe(`Bearer ${token}`)
+        await route.fulfill({ status: 200, json: { ...user, fullName } })
       } else if (key === 'GET /attempts') {
         expect(request.headers().authorization).toBe(`Bearer ${token}`)
         await route.fulfill({ json: { items: [], meta: { page: 1, limit: 6, total: 0, totalPages: 0 } } })
@@ -169,7 +172,7 @@ test('saved profile edits update account details and home greeting and persist a
   await expect(fullName).toHaveValue(saved.fullName)
   await expect(workplace).toHaveValue(saved.workplace)
   await expect(currentResidence).toHaveValue(saved.currentResidence)
-  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call))).toBe(true)
+  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts', 'PATCH /users/me'].includes(call))).toBe(true)
 })
 
 test('account save notices expire after one second and repeated saves restart their lifetime', async ({ page }) => {
@@ -301,7 +304,7 @@ test('avatar upload persists locally across reload and can be removed', async ({
   expect(await page.evaluate((key) => localStorage.getItem(key), avatarKey)).toBeNull()
   await page.reload()
   await expect(photo).toHaveCount(0)
-  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call))).toBe(true)
+  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts', 'PATCH /users/me'].includes(call))).toBe(true)
 })
 
 test('overlapping avatar and cover notices expire independently after one second', async ({ page }) => {
@@ -398,7 +401,7 @@ test('cover editor uploads an image that persists independently of the avatar an
   await page.reload()
   await expect(photo).toHaveAttribute('src', defaultCover)
   await expect(page.locator('.account-avatar-shell img')).toHaveAttribute('src', savedAvatar!)
-  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call))).toBe(true)
+  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts', 'PATCH /users/me'].includes(call))).toBe(true)
 })
 
 test('invalid cover files preserve the saved image and report a cover error', async ({ page }) => {

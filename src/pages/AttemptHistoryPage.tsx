@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { ArrowRight, CheckCircle2, Clock3, History, RefreshCw, XCircle } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { CheckCircle2, Clock3, History, XCircle } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { attemptsApi, getAttemptErrorMessage } from '../api/attempts'
 import { clearAttemptCache, readAttemptCache } from '../attempts/attempt-storage'
@@ -144,11 +144,22 @@ export default function AttemptHistoryPage() {
 
   const current = state?.key === key ? state : null
   const history = current?.kind === 'ready' ? current.history : null
+  const bestScoreByExam = useMemo(() => {
+    const map = new Map<string, number>()
+    if (!history) return map
+    for (const item of history.items) {
+      if (item.status === 'SUBMITTED' && typeof item.score === 'number') {
+        const cur = map.get(item.exam.id) ?? -1
+        if (item.score > cur) map.set(item.exam.id, item.score)
+      }
+    }
+    return map
+  }, [history])
 
   return <div className="exam-page history-page">
     <header className="exam-page-heading">
       <div><p className="exam-eyebrow"><History size={16} aria-hidden="true" /> Bài thi của bạn</p><h1>Lịch sử làm bài</h1><p>Tiếp tục bài đang làm và xem lại kết quả của bạn.</p></div>
-      <Link className="button button-primary button-inline" to="/exams">Chọn đề thi <ArrowRight size={17} aria-hidden="true" /></Link>
+      <Link className="button button-primary button-inline" to="/exams">Chọn đề thi</Link>
     </header>
     <div className="history-toolbar">
       <label className="exam-filter">Trạng thái bài làm
@@ -164,7 +175,7 @@ export default function AttemptHistoryPage() {
           <option value="CANCELLED">Đã hủy</option>
         </select>
       </label>
-      <button type="button" className="button button-secondary button-inline" disabled={!current || cancelling} onClick={() => setVersion((value) => value + 1)}><RefreshCw size={16} aria-hidden="true" /> Làm mới</button>
+      <button type="button" className="button button-secondary button-inline" disabled={!current || cancelling} onClick={() => setVersion((value) => value + 1)}>Làm mới</button>
     </div>
     {actionError && <p className="form-error" role="alert">{actionError}</p>}
     {notice && <p className="form-success" role="status">{notice}</p>}
@@ -187,9 +198,11 @@ export default function AttemptHistoryPage() {
           const expired = hasExpired(item, now)
           const state = getStatus(item, expired)
           const StatusIcon = state.icon
+          const isBest = item.status === 'SUBMITTED' && typeof item.score === 'number' && item.score === bestScoreByExam.get(item.exam.id)
           return <article className="attempt-history-card exam-card" key={item.id}>
             <div className="attempt-history-main">
               <span className={`attempt-status ${state.className}`}><StatusIcon size={16} aria-hidden="true" /> {state.name}</span>
+              {isBest && <span className="exam-badge attempt-best-badge" style={{ marginLeft: '8px' }}>Điểm cao nhất</span>}
               <h2>{item.exam.title}</h2>
               <dl className="attempt-history-dates">
                 <div><dt>Bắt đầu</dt><dd>{formatDate(item.startedAt)}</dd></div>
@@ -202,7 +215,7 @@ export default function AttemptHistoryPage() {
               {item.status === 'SUBMITTED' && <p className="history-score" aria-label="Điểm bài thi"><strong>{typeof item.score === 'number' ? numberFormat.format(item.score) : '—'}</strong> / {numberFormat.format(item.maxScore)}</p>}
               <p>{item.totalQuestions} câu hỏi</p>
               <div className="attempt-history-actions">
-                {(item.status === 'SUBMITTED' || expired) && item.status !== 'CANCELLED' && <Link className="button button-secondary button-inline" to={`/attempts/${item.id}/result`} state={{ examId: item.exam.id }}>Xem kết quả <ArrowRight size={16} aria-hidden="true" /></Link>}
+                {(item.status === 'SUBMITTED' || expired) && item.status !== 'CANCELLED' && <Link className="button button-secondary button-inline" to={`/attempts/${item.id}/result`} state={{ examId: item.exam.id }}>Xem kết quả</Link>}
                 {item.status === 'IN_PROGRESS' && !expired && <>
                   <Link className="button button-primary button-inline" to={`/exams/${item.exam.id}/take`} onClick={(event) => {
                     const checkedAt = Date.now()
@@ -210,7 +223,7 @@ export default function AttemptHistoryPage() {
                     event.preventDefault()
                     setNow(checkedAt)
                     navigate(`/attempts/${item.id}/result`, { state: { examId: item.exam.id } })
-                  }}>Tiếp tục bài <ArrowRight size={16} aria-hidden="true" /></Link>
+                  }}>Tiếp tục bài</Link>
                   <button type="button" className="attempt-cancel-link" disabled={cancelling} onClick={() => { setCancelSelection(item); clearActionMessage() }}>Hủy bài</button>
                 </>}
                 {item.status === 'CANCELLED' && <span className="history-cancelled-note">Không chấm điểm</span>}

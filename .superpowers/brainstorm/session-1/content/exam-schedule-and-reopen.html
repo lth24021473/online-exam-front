@@ -1,0 +1,78 @@
+<h2>Giao diện Cài đặt Thời gian, Giới hạn Số lượt làm & Mở lại Đề thi</h2>
+<p class="subtitle">Giáo viên thiết lập khung giờ thi tự động và số lượt làm tối đa cho mỗi học viên. Học viên hết lượt sẽ chỉ được xem kết quả.</p>
+
+<div class="cards">
+  <!-- Card 1: Manager Form -->
+  <div class="card" data-choice="manager-schedule-form">
+    <div class="preview" style="background:#f5f0e8;padding:20px;border:2px solid #1a1a1a;">
+      <h3 style="font-family:'Space Grotesk',sans-serif;text-transform:uppercase;margin:0 0 12px;font-size:16px;">1. Cài đặt đề thi (Thời gian & Lượt làm)</h3>
+      <div style="background:#ffffff;border:2px solid #1a1a1a;padding:16px;box-shadow:3px 3px 0 0 #1a1a1a;margin-bottom:12px;">
+        <label style="display:block;font-weight:700;font-size:13px;text-transform:uppercase;margin-bottom:6px;">Thời gian mở đề (Tự động mở):</label>
+        <input type="datetime-local" value="2026-10-20T08:00" style="width:100%;padding:8px 12px;border:2px solid #1a1a1a;font-family:'Space Grotesk',sans-serif;font-weight:600;margin-bottom:12px;box-sizing:border-box;" />
+
+        <label style="display:block;font-weight:700;font-size:13px;text-transform:uppercase;margin-bottom:6px;">Thời gian đóng đề (Tự động đóng):</label>
+        <input type="datetime-local" value="2026-10-20T17:00" style="width:100%;padding:8px 12px;border:2px solid #1a1a1a;font-family:'Space Grotesk',sans-serif;font-weight:600;margin-bottom:12px;box-sizing:border-box;" />
+
+        <label style="display:block;font-weight:700;font-size:13px;text-transform:uppercase;margin-bottom:6px;">Số lần làm bài tối đa cho mỗi học viên:</label>
+        <input type="number" min="1" max="10" value="1" style="width:100%;padding:8px 12px;border:2px solid #1a1a1a;font-family:'Space Grotesk',sans-serif;font-weight:600;box-sizing:border-box;" />
+        <p style="font-size:12px;color:#555;margin:6px 0 0;">* Mặc định 1 lần. Quá số lần này học viên sẽ bị khóa, không được làm thêm.</p>
+      </div>
+      <button type="button" style="padding:10px 18px;border:2px solid #1a1a1a;background:#ffcc00;color:#1a1a1a;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;text-transform:uppercase;box-shadow:3px 3px 0 0 #1a1a1a;cursor:pointer;">
+        LƯU CÀI ĐẶT ĐỀ THI
+      </button>
+    </div>
+    <div class="caption">
+      <h3>Cài đặt thời gian & Số lần làm</h3>
+      <p>Giáo viên toàn quyền cấu hình: thời gian mở, thời gian đóng, và số lượt làm cho phép (mặc định 1 lần).</p>
+    </div>
+  </div>
+
+  <!-- Card 2: Student Quota Exhausted View -->
+  <div class="card" data-choice="student-attempts-exhausted">
+    <div class="preview" style="background:#f5f0e8;padding:20px;border:2px solid #1a1a1a;">
+      <h3 style="font-family:'Space Grotesk',sans-serif;text-transform:uppercase;margin:0 0 12px;font-size:16px;">2. Khi học viên đã làm đủ số lần cho phép</h3>
+      <div style="background:#ffffff;border:2px solid #1a1a1a;padding:16px;box-shadow:3px 3px 0 0 #1a1a1a;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <h4 style="margin:0;font-size:15px;">Kiểm tra Giữa kỳ Toán Tin</h4>
+          <span style="display:inline-block;padding:3px 8px;background:#fee2e2;color:#991b1b;border:2px solid #1a1a1a;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:11px;text-transform:uppercase;">
+            ĐÃ DÙNG 1/1 LƯỢT THI
+          </span>
+        </div>
+        <p style="font-size:13px;color:#444;margin:0 0 12px;">Bạn đã hoàn thành bài thi này và đạt <strong>8.5 / 10 điểm</strong>. Bạn không thể làm lại vì đề thi quy định tối đa 1 lượt làm.</p>
+        <button type="button" style="padding:10px 18px;border:2px solid #1a1a1a;background:#ffffff;color:#1a1a1a;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;text-transform:uppercase;box-shadow:3px 3px 0 0 #1a1a1a;cursor:pointer;">
+          XEM KẾT QUẢ & ĐÁP ÁN
+        </button>
+      </div>
+    </div>
+    <div class="caption">
+      <h3>Giao diện Học viên khi hết lượt</h3>
+      <p>Khóa nút làm bài khi học viên đã đạt giới hạn `maxAttempts`. Chỉ cung cấp nút xem kết quả và bài giải.</p>
+    </div>
+  </div>
+
+  <!-- Card 3: Manager Reopen Action -->
+  <div class="card" data-choice="manager-reopen-action">
+    <div class="preview" style="background:#f5f0e8;padding:20px;border:2px solid #1a1a1a;">
+      <h3 style="font-family:'Space Grotesk',sans-serif;text-transform:uppercase;margin:0 0 12px;font-size:16px;">3. Mở lại đề thi & Bảo lưu kết quả cũ</h3>
+      <div style="background:#ffffff;border:2px solid #1a1a1a;padding:16px;box-shadow:3px 3px 0 0 #1a1a1a;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <span style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;">ĐỀ THI CUỐI KỲ VẬT LÝ</span>
+          <span style="display:inline-block;padding:4px 10px;background:#ffdad6;color:#cc0000;border:2px solid #1a1a1a;font-family:'Space Grotesk',sans-serif;font-weight:800;font-size:12px;text-transform:uppercase;">ĐÃ ĐÓNG</span>
+        </div>
+        <p style="font-size:13px;color:#333;margin:0 0 12px;">Đã nộp: <strong>38 bài</strong>. Mở lại đề sẽ cho phép học viên chưa làm vào thi, hoặc giáo viên có thể tăng số lượt làm để học viên thi lại.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button type="button" style="padding:10px 18px;border:2px solid #1a1a1a;background:#ffcc00;color:#1a1a1a;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;text-transform:uppercase;box-shadow:3px 3px 0 0 #1a1a1a;cursor:pointer;">
+            MỞ LẠI ĐỀ THI
+          </button>
+          <button type="button" style="padding:10px 18px;border:2px solid #1a1a1a;background:#ffffff;color:#1a1a1a;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:800;text-transform:uppercase;box-shadow:3px 3px 0 0 #1a1a1a;cursor:pointer;">
+            SỬA CÀI ĐẶT & THỜI HẠN
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="caption">
+      <h3>Linh hoạt cho Giáo viên</h3>
+      <p>Giáo viên có thể mở lại đề bất kỳ lúc nào, gia hạn thêm thời gian đóng, hoặc nâng số lượt làm bài nếu muốn cho thi cải thiện.</p>
+    </div>
+  </div>
+</div>

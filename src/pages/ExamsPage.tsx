@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BookOpen, Clock3, ArrowRight, Search } from 'lucide-react'
+import { BookOpen, Clock3, Search } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { examsApi } from '../api/exams'
@@ -48,7 +48,7 @@ export default function ExamsPage() {
       {catalog.items.length === 0 ? <div className="empty-state"><BookOpen size={36} aria-hidden="true" /><h3>{studentCatalog ? 'Chưa có đề thi đang mở' : 'Chưa có đề thi để hiển thị'}</h3><p>Bạn có thể nhập mã đề do giảng viên chia sẻ.</p></div> : <div className="exam-grid">{catalog.items.map((exam) => <article className="exam-card" key={exam.id}>
         <span className={`exam-badge exam-badge-${exam.status.toLowerCase()}`}>{examStatusLabels[exam.status]}</span><h2>{exam.title}</h2><p>{exam.description || 'Kiểm tra kiến thức với bài thi trắc nghiệm.'}</p>
         <div className="exam-card-meta"><span><Clock3 size={16} aria-hidden="true" /> {exam.durationMinutes} phút</span>{exam.totalQuestions !== null && <span><BookOpen size={16} aria-hidden="true" /> {exam.totalQuestions} câu hỏi</span>}</div>
-        <Link to={`/exams/${exam.id}`} className="button button-inline exam-button-secondary">Xem đề thi <ArrowRight size={17} aria-hidden="true" /></Link>
+        <Link to={`/exams/${exam.id}`} className="button button-inline exam-button-secondary">Xem đề thi</Link>
       </article>)}</div>}
       {catalog.meta.totalPages > 1 && <nav className="exam-pagination" aria-label="Phân trang đề thi"><button disabled={page <= 1} onClick={() => changePage(page - 1)}>Trang trước</button><span>Trang {page} / {catalog.meta.totalPages}</span><button disabled={page >= catalog.meta.totalPages} onClick={() => changePage(page + 1)}>Trang sau</button></nav>}
     </>}

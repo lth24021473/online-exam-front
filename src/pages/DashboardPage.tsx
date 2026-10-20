@@ -78,7 +78,7 @@ function ExamCard({ item }: { item: ExamInfo }) {
 
 function DashboardContent({ user }: { user: AuthUser }) {
   const { profile } = useAccountProfile()
-  const { avatar } = useProfileAvatar(user.id)
+  const { avatar } = useProfileAvatar(user.id, user.avatar)
   const isStudent = user.role === 'STUDENT'
   const tabs = isStudent ? attemptTabs : examTabs
   const [selectedIndex, setSelectedIndex] = useState(0)

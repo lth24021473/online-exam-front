@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, KeyboardEvent, SubmitEvent } from 'react'
-import { BookOpen, BriefcaseBusiness, CalendarDays, Camera, Check, ClipboardList, Mail, MapPin, Save, ShieldCheck, Trash2, UsersRound } from 'lucide-react'
+import { BookOpen, BriefcaseBusiness, CalendarDays, Camera, Check, ClipboardList, Mail, MapPin, ShieldCheck, UsersRound } from 'lucide-react'
 import { Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import type { AuthUser } from '../api/auth.api'
 import { useAuth } from '../auth/useAuth'
@@ -41,12 +41,16 @@ function ProfileContent({ user }: { user: AuthUser }) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
   const fileInput = useRef<HTMLInputElement>(null)
   const coverInput = useRef<HTMLInputElement>(null)
-  const { avatar, saving, error, notice, updateAvatar, removeAvatar } = useProfileAvatar(user.id)
-  const { cover, saving: savingCover, error: coverError, notice: coverNotice, updateCover, removeCover } = useProfileCover(user.id)
+  const { avatar, saving, error, notice, updateAvatar, removeAvatar } = useProfileAvatar(user.id, user.avatar)
+  const { cover, saving: savingCover, error: coverError, notice: coverNotice, updateCover, removeCover } = useProfileCover(user.id, user.cover)
   const requestedTab = searchParams.get('tab')
   const activeTab: ProfileTab = tabs.find((tab) => tab.id === requestedTab)?.id ?? 'about'
   const role = roleLabels[user.role]
   const joined = new Date(user.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
+
+  useEffect(() => {
+    setDraft(profile)
+  }, [profile])
 
   useEffect(() => {
     function keepActiveTabVisible() {
@@ -179,8 +183,8 @@ function ProfileContent({ user }: { user: AuthUser }) {
               <h2>Cùng học, cùng tiến bộ</h2>
               <p className="account-card-description">Một nơi để xem lớp học, theo dõi nhiệm vụ và quản lý tài khoản của bạn.</p>
               <div className="account-shortcuts">
-                <button type="button" onClick={() => selectTab('classes')}><UsersRound size={20} aria-hidden="true" /><span>Lớp học của tôi</span><span aria-hidden="true">→</span></button>
-                <button type="button" onClick={() => selectTab('tasks')}><ClipboardList size={20} aria-hidden="true" /><span>Nhiệm vụ của tôi</span><span aria-hidden="true">→</span></button>
+                <button type="button" onClick={() => selectTab('classes')}><span>Lớp học của tôi</span></button>
+                <button type="button" onClick={() => selectTab('tasks')}><span>Nhiệm vụ của tôi</span></button>
               </div>
             </article>
           </div>
@@ -235,7 +239,7 @@ function ProfileContent({ user }: { user: AuthUser }) {
               {editError && <p className="account-feedback account-feedback-error" role="alert">{editError}</p>}
               {editNotice && <p className="account-feedback account-feedback-success" role="status"><Check size={18} aria-hidden="true" />{editNotice}</p>}
               <div className="account-edit-actions">
-                <button className="account-action-button account-action-primary" type="submit"><Save size={17} aria-hidden="true" />Lưu thay đổi</button>
+                <button className="account-action-button account-action-primary" type="submit">Lưu thay đổi</button>
                 <button className="account-action-button" type="button" onClick={cancelProfileChanges}>Hủy thay đổi</button>
               </div>
             </form>
@@ -247,9 +251,9 @@ function ProfileContent({ user }: { user: AuthUser }) {
                 </div>
                 <div className="account-settings-actions">
                   <button className="account-action-button account-action-primary" type="button" disabled={saving} onClick={() => fileInput.current?.click()}>
-                    <Camera size={17} aria-hidden="true" />{saving ? 'Đang lưu ảnh…' : 'Chỉnh sửa ảnh đại diện'}
+                    {saving ? 'Đang lưu ảnh…' : 'Chỉnh sửa ảnh đại diện'}
                   </button>
-                  {avatar && <button className="account-action-button" type="button" disabled={saving} onClick={removeAvatar}><Trash2 size={17} aria-hidden="true" />Xóa ảnh đại diện</button>}
+                  {avatar && <button className="account-action-button account-action-danger" type="button" disabled={saving} onClick={removeAvatar}>Xóa ảnh đại diện</button>}
                 </div>
               </div>
               <div className="account-edit-image-section">
@@ -259,9 +263,9 @@ function ProfileContent({ user }: { user: AuthUser }) {
                 </div>
                 <div className="account-settings-actions">
                   <button className="account-action-button account-action-primary" type="button" disabled={savingCover} onClick={() => coverInput.current?.click()}>
-                    <Camera size={17} aria-hidden="true" />{savingCover ? 'Đang lưu ảnh…' : 'Chọn ảnh bìa mới'}
+                    {savingCover ? 'Đang lưu ảnh…' : 'Chọn ảnh bìa mới'}
                   </button>
-                  {cover && <button className="account-action-button" type="button" disabled={savingCover} onClick={removeCover}><Trash2 size={17} aria-hidden="true" />Xóa ảnh bìa</button>}
+                  {cover && <button className="account-action-button account-action-danger" type="button" disabled={savingCover} onClick={removeCover}>Xóa ảnh bìa</button>}
                 </div>
               </div>
             </div>

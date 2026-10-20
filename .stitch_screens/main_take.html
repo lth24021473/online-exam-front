@@ -1,0 +1,273 @@
+<main class="flex-1 max-w-[1600px] w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- LEFT COLUMN: QUESTION CONTENT (8 COLS) -->
+<section class="lg:col-span-8 flex flex-col gap-5">
+<!-- Main Question Card -->
+<div class="bg-surface-container-lowest border-2 border-outline p-6 bauhaus-shadow flex flex-col gap-6">
+<!-- Question Meta & Badges -->
+<div class="flex flex-wrap items-center justify-between gap-3 border-b-2 border-outline pb-4">
+<div class="flex items-center gap-3">
+<span class="bg-primary text-background font-headline font-black text-lg sm:text-xl px-3 py-1 uppercase tracking-tight">
+              Câu hỏi 14 / 40
+            </span>
+<span class="bg-surface-container-high border-2 border-outline font-label text-xs sm:text-sm font-bold px-2.5 py-1 uppercase">
+              Trọng số: 2.5 điểm
+            </span>
+</div>
+<div class="flex items-center gap-2">
+<span class="bg-tertiary-container text-on-tertiary-container border border-outline font-headline font-bold text-xs uppercase px-2.5 py-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="folder">folder</span>
+              Cấu trúc dữ liệu &amp; Thuật toán
+            </span>
+<span class="bg-surface-variant text-on-surface border border-outline font-mono text-xs font-bold px-2 py-1">
+              Mức độ: Vận dụng cao
+            </span>
+</div>
+</div>
+<!-- Question Text -->
+<div class="space-y-4">
+<h2 class="font-headline font-bold text-lg sm:text-xl text-primary leading-snug">
+            Cho đoạn mã nguồn triển khai thuật toán đệ quy sau đây trong ngôn ngữ C++. Hãy xác định độ phức tạp thời gian tiệm cận trường hợp xấu nhất (Worst-case Time Complexity) của hàm <code class="bg-surface-container px-1.5 py-0.5 border border-outline font-mono text-base font-bold">computePath(n)</code>.
+          </h2>
+<p class="text-sm text-on-surface-variant font-medium">
+            Lưu ý: Giả sử kích thước đầu vào n là số nguyên dương và các lời gọi đệ quy đều thoả mãn điều kiện dừng của hàm cơ bản.
+          </p>
+<!-- Neo-Brutalist Code Snippet Box -->
+<div class="border-2 border-outline bg-inverse-surface text-inverse-on-surface font-mono text-xs sm:text-sm overflow-hidden bauhaus-shadow-sm">
+<div class="bg-primary px-4 py-2 border-b-2 border-outline flex items-center justify-between text-background font-headline text-xs uppercase tracking-wider font-bold">
+<div class="flex items-center gap-2">
+<span class="inline-block w-2.5 h-2.5 bg-secondary border border-outline"></span>
+<span class="inline-block w-2.5 h-2.5 bg-primary-container border border-outline"></span>
+<span class="inline-block w-2.5 h-2.5 bg-tertiary border border-outline"></span>
+<span class="ml-2 font-mono">Algorithm_Analysis.cpp</span>
+</div>
+<span class="text-surface-dim text-[11px]">C++20 Strict Mode</span>
+</div>
+<pre class="p-4 overflow-x-auto leading-relaxed text-surface-container-high"><code><span class="text-primary-fixed">#include</span> <span class="text-tertiary-fixed">&lt;iostream&gt;</span>
+<span class="text-secondary-fixed">long long</span> <span class="text-primary-fixed">computePath</span>(<span class="text-secondary-fixed">int</span> n) {
+    <span class="text-surface-dim">// Trường hợp cơ sở</span>
+    <span class="text-primary-fixed">if</span> (n &lt;= 1) {
+        <span class="text-primary-fixed">return</span> 1;
+    }
+    
+    <span class="text-surface-dim">// Vòng lặp phân rã kích thước n</span>
+    <span class="text-secondary-fixed">long long</span> sum = 0;
+    <span class="text-primary-fixed">for</span> (<span class="text-secondary-fixed">int</span> i = 1; i &lt; n; i *= 2) {
+        sum += i;
+    }
+    
+    <span class="text-surface-dim">// Phân nhánh đệ quy nhị phân</span>
+    <span class="text-primary-fixed">return</span> sum + computePath(n - 1) + computePath(n - 2);
+}</code></pre>
+</div>
+</div>
+<!-- 4 Multiple Choice Options (A, B, C, D) -->
+<div class="flex flex-col gap-3 pt-2">
+<label class="block text-xs font-headline font-black uppercase tracking-wider text-on-surface-variant">
+            Chọn 01 đáp án chính xác nhất:
+          </label>
+<!-- Option A (Unselected) -->
+<label class="cursor-pointer group flex items-start gap-4 p-4 border-2 border-outline bg-surface-container-lowest hover:bg-surface-container transition-none active:translate-x-0.5 active:translate-y-0.5">
+<input class="hidden peer" name="answer_mcq" type="radio" value="A">
+<div class="w-8 h-8 flex-shrink-0 border-2 border-outline bg-surface font-headline font-black text-sm flex items-center justify-center group-hover:bg-primary group-hover:text-background">
+              A
+            </div>
+<div class="flex-1 text-sm font-medium pt-1">
+<span class="font-mono font-bold text-base text-primary">O(n · log n)</span> — Vì vòng lặp <code class="font-mono bg-surface-container px-1">for</code> chạy <code class="font-mono">log n</code> bước và chiều sâu đệ quy là bậc tuyến tính.
+            </div>
+</label>
+<!-- Option B (Selected State - High Contrast Bauhaus Double-Border & Accent Yellow) -->
+<label class="cursor-pointer group flex items-start gap-4 p-4 border-2 border-outline bg-primary-container/20 ring-2 ring-primary ring-offset-2 bg-surface-bright bauhaus-shadow-sm transition-none">
+<input checked="" class="hidden peer" name="answer_mcq" type="radio" value="B">
+<div class="w-8 h-8 flex-shrink-0 border-2 border-outline bg-primary text-background font-headline font-black text-sm flex items-center justify-center">
+              B
+            </div>
+<div class="flex-1 text-sm font-semibold pt-1">
+<div class="flex items-center justify-between">
+<span class="font-mono font-bold text-base text-primary">O(2ⁿ)</span>
+<span class="bg-primary text-background font-label text-[10px] font-black uppercase px-2 py-0.5 border border-outline">
+                  Đang chọn
+                </span>
+</div>
+<p class="mt-0.5 text-on-surface font-normal">
+                Hàm sinh ra cây đệ quy tương đương dãy Fibonacci có số lượng nút lá cấp số mũ <code class="font-mono font-bold">Θ(φⁿ)</code> và chi phí mỗi nút phụ trội không làm giảm bậc mũ của thuật toán.
+              </p>
+</div>
+</label>
+<!-- Option C (Unselected) -->
+<label class="cursor-pointer group flex items-start gap-4 p-4 border-2 border-outline bg-surface-container-lowest hover:bg-surface-container transition-none active:translate-x-0.5 active:translate-y-0.5">
+<input class="hidden peer" name="answer_mcq" type="radio" value="C">
+<div class="w-8 h-8 flex-shrink-0 border-2 border-outline bg-surface font-headline font-black text-sm flex items-center justify-center group-hover:bg-primary group-hover:text-background">
+              C
+            </div>
+<div class="flex-1 text-sm font-medium pt-1">
+<span class="font-mono font-bold text-base text-primary">O(n²)</span> — Vì tại mỗi cấp bậc đệ quy, phép tính tổng vòng lặp tích luỹ tạo thành chuỗi số bậc 2.
+            </div>
+</label>
+<!-- Option D (Unselected) -->
+<label class="cursor-pointer group flex items-start gap-4 p-4 border-2 border-outline bg-surface-container-lowest hover:bg-surface-container transition-none active:translate-x-0.5 active:translate-y-0.5">
+<input class="hidden peer" name="answer_mcq" type="radio" value="D">
+<div class="w-8 h-8 flex-shrink-0 border-2 border-outline bg-surface font-headline font-black text-sm flex items-center justify-center group-hover:bg-primary group-hover:text-background">
+              D
+            </div>
+<div class="flex-1 text-sm font-medium pt-1">
+<span class="font-mono font-bold text-base text-primary">O(n!)</span> — Không gian tìm kiếm phân nhánh vô hạn do tham số suy biến trong hai nhánh con.
+            </div>
+</label>
+</div>
+<!-- Question Actions Toolbar -->
+<div class="pt-4 border-t-2 border-outline flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center gap-2">
+<!-- Mark for Review Button -->
+<button class="bg-surface-bright text-on-surface hover:bg-primary-container border-2 border-outline font-headline font-bold text-xs uppercase px-3 py-2 flex items-center gap-1.5 active:translate-x-0.5 active:translate-y-0.5 transition-none" id="bookmark-btn">
+<span class="material-symbols-outlined text-base" data-icon="bookmark">bookmark</span>
+<span>Đánh dấu xem lại sau</span>
+</button>
+<!-- Clear Selection Button -->
+<button class="bg-surface-container-low text-on-surface-variant hover:text-error border-2 border-outline font-headline font-bold text-xs uppercase px-3 py-2 flex items-center gap-1.5 active:translate-x-0.5 active:translate-y-0.5 transition-none">
+<span class="material-symbols-outlined text-base" data-icon="clear">clear</span>
+<span>Xóa lựa chọn</span>
+</button>
+</div>
+<!-- Step Navigation: Previous & Next -->
+<div class="flex items-center gap-2">
+<button class="bg-surface-container-high text-on-surface hover:bg-surface-dim border-2 border-outline font-headline font-bold text-xs uppercase px-4 py-2 flex items-center gap-1.5 active:translate-x-0.5 active:translate-y-0.5 transition-none">
+<span class="material-symbols-outlined text-base" data-icon="arrow_back">arrow_back</span>
+<span>Câu trước</span>
+</button>
+<button class="bg-primary text-background hover:bg-on-surface border-2 border-outline font-headline font-bold text-xs uppercase px-5 py-2 flex items-center gap-1.5 bauhaus-shadow-sm active:translate-x-0.5 active:translate-y-0.5 transition-none">
+<span>Lưu &amp; Câu tiếp theo</span>
+<span class="material-symbols-outlined text-base" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Compact Exam Rules Alert (Anti-cheat reminder) -->
+<div class="bg-secondary-container border-2 border-outline p-3.5 flex items-start gap-3 text-on-secondary-container">
+<span class="material-symbols-outlined text-error text-xl flex-shrink-0" data-icon="shield">shield</span>
+<div class="text-xs leading-relaxed">
+<span class="font-headline font-bold uppercase tracking-wider text-error">Quy chế phòng thi số:</span> 
+          Hệ thống đang khoá con trỏ chuột trong màn hình phòng thi. Thí sinh không được chuyển tab trình duyệt, sử dụng phím tắt Alt+Tab, hoặc rời khỏi camera giám sát. Vi phạm quá 3 lần bài thi sẽ tự động kết thúc.
+        </div>
+</div>
+</section>
+<!-- RIGHT COLUMN: NAVIGATION GRID & PROGRESS PANEL (4 COLS) -->
+<aside class="lg:col-span-4 flex flex-col gap-5">
+<!-- Card: Overview & Question Matrix -->
+<div class="bg-surface-container-lowest border-2 border-outline p-5 bauhaus-shadow flex flex-col gap-5">
+<!-- Header & Progress bar -->
+<div>
+<div class="flex items-center justify-between mb-2">
+<h3 class="font-headline font-black text-sm uppercase tracking-wider text-primary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-base" data-icon="apps">apps</span>
+              BẢNG ĐIỀU HƯỚNG CÂU HỎI
+            </h3>
+<span class="font-headline font-black text-base text-primary">18/40 (45%)</span>
+</div>
+<!-- Progress Bar Neo-Brutalist -->
+<div class="w-full h-3 border-2 border-outline bg-surface-container overflow-hidden">
+<div class="h-full bg-primary" style="width: 45%;"></div>
+</div>
+</div>
+<!-- Legend (Chú thích trạng thái) -->
+<div class="grid grid-cols-3 gap-2 text-xs font-label font-bold border-y-2 border-outline py-3">
+<div class="flex items-center gap-1.5">
+<span class="w-3.5 h-3.5 bg-primary border border-outline inline-block"></span>
+<span class="text-on-surface">Đã trả lời <span class="font-mono text-[11px]">(18)</span></span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-3.5 h-3.5 bg-primary-container border border-outline inline-block"></span>
+<span class="text-on-surface">Xem lại <span class="font-mono text-[11px]">(3)</span></span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-3.5 h-3.5 bg-surface-container-low border border-outline inline-block"></span>
+<span class="text-on-surface">Chưa làm <span class="font-mono text-[11px]">(19)</span></span>
+</div>
+</div>
+<!-- The 40 Questions Grid (5 columns x 8 rows) -->
+<div class="grid grid-cols-5 gap-2 max-h-[360px] overflow-y-auto p-1 pr-2">
+<!-- Câu 01-13 (Mix of answered, bookmarked) -->
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">01</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">02</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">03</button>
+<button class="h-10 border-2 border-outline bg-primary-container text-on-primary-container font-headline font-black text-xs flex items-center justify-center border-dashed">04</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">05</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">06</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">07</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">08</button>
+<button class="h-10 border-2 border-outline bg-primary-container text-on-primary-container font-headline font-black text-xs flex items-center justify-center border-dashed">09</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">10</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">11</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">12</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">13</button>
+<!-- Current Question 14 (Active highlight with thick ring & yellow background) -->
+<button class="h-10 border-2 border-outline bg-primary-container text-primary font-headline font-black text-sm ring-2 ring-primary ring-offset-2 flex items-center justify-center bauhaus-shadow-sm">
+            14
+          </button>
+<!-- Câu 15-40 -->
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">15</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">16</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">17</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">18</button>
+<button class="h-10 border-2 border-outline bg-primary-container text-on-primary-container font-headline font-black text-xs flex items-center justify-center border-dashed">19</button>
+<button class="h-10 border-2 border-outline bg-primary text-background font-headline font-bold text-xs flex items-center justify-center hover:bg-primary-container hover:text-primary">20</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">21</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">22</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">23</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">24</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">25</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">26</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">27</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">28</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">29</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">30</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">31</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">32</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">33</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">34</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">35</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">36</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">37</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">38</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">39</button>
+<button class="h-10 border-2 border-outline bg-surface-container-low text-on-surface font-headline font-bold text-xs flex items-center justify-center hover:bg-surface-variant">40</button>
+</div>
+<!-- Quick Filter / Shortcuts -->
+<div class="flex items-center justify-between text-xs font-bold pt-2 border-t-2 border-outline">
+<button class="text-tertiary hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="filter_list">filter_list</span>
+            Đến câu chưa làm đầu tiên
+          </button>
+<span class="text-on-surface-variant font-mono">Trang 1/1</span>
+</div>
+</div>
+<!-- Live Proctor & Candidate Monitoring Card -->
+<div class="bg-surface-container-lowest border-2 border-outline p-4 bauhaus-shadow flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="font-headline font-bold text-xs uppercase tracking-wide flex items-center gap-1.5">
+<span class="material-symbols-outlined text-secondary text-base" data-icon="camera">camera</span>
+            Camera AI &amp; Cán bộ coi thi
+          </span>
+<span class="bg-surface-container-high border border-outline text-[10px] font-bold px-1.5 py-0.5">
+            FPS: 30 / Đạt chuẩn
+          </span>
+</div>
+<!-- Camera stream mock -->
+<div class="relative w-full h-36 bg-inverse-surface border-2 border-outline flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover opacity-80" data-alt="A focused Vietnamese university student taking a computer science programming exam in front of a modern workstation monitor. Natural daylight softly illuminates the neat desk setup, while a subtle brutalist architectural background is visible. The composition is clean, centered, and highlights calm focus and professional test-taking integrity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5EX9fPCbYyi9smaRLp9i-Jjh46BvIxvf2yyeblPnwBpzp2jfczKntJNNhf_JcRjiePawpsLD2T9ZIW_2Nj2fPeRgt-WRbZCM9xzZnmsrOIfSTI0ZIBZAGRX8n7mfJYOi1oBlFWREVaBA41bNq27rVv4FZ17azOJNVLbcc_ARluWnl68twbQStb-ZsVneWu7VFtBjfa-ywRBiko5YAnnTMMTPySwDFRUvPYzw4Fu3OJBBp5YIkYk5B">
+<div class="absolute top-2 left-2 bg-secondary text-white text-[10px] font-mono px-1.5 py-0.5 font-bold tracking-wider uppercase border border-outline">
+            REC • AI FACE ID
+          </div>
+<div class="absolute bottom-2 right-2 bg-primary/80 text-background text-[10px] font-mono px-2 py-0.5">
+            Micro: Hoạt động (Tạp âm: 0.2%)
+          </div>
+</div>
+<div class="flex items-center justify-between text-xs font-medium text-on-surface-variant">
+<span>Giám thị 01: ThS. Trần Hoàng Nam</span>
+<button class="text-secondary hover:underline font-bold flex items-center gap-0.5">
+<span class="material-symbols-outlined text-sm" data-icon="help">help</span>
+            Báo sự cố
+          </button>
+</div>
+</div>
+</aside>
+</main>

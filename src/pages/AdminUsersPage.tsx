@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { RefreshCw, Search, ShieldCheck, Trash2, UsersRound } from 'lucide-react'
+import { Search, ShieldCheck, UsersRound } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { AuthRole, AuthUser } from '../api/auth.api'
 import { adminUsersApi, getAdminErrorMessage } from '../api/admin-users'
@@ -130,7 +130,7 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
         <button type="button" className="button button-danger button-inline" disabled={busy || Boolean(confirmation)} onClick={() => {
           clearFeedback()
           setConfirmation('delete')
-        }}><Trash2 size={17} aria-hidden="true" /> Xóa tài khoản</button>
+        }}>Xóa tài khoản</button>
 
         {confirmation && <section className="admin-confirm" role="dialog" aria-labelledby="admin-confirm-title" onKeyDown={(event) => {
           if (event.key === 'Escape' && !busy) setConfirmation(null)
@@ -204,7 +204,7 @@ export default function AdminUsersPage() {
       <button type="button" className="button button-secondary button-inline" disabled={busy} onClick={() => {
         setNotice('')
         setRevision((value) => value + 1)
-      }}><RefreshCw size={17} aria-hidden="true" /> Làm mới</button>
+      }}>Làm mới</button>
     </div>
     {notice && <p className="form-success" role="status">{notice}</p>}
     {!current ? <section className="exam-state-panel" role="status">Đang tải danh sách tài khoản…</section>

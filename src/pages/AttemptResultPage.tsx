@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { ArrowLeft, ArrowRight, CheckCircle2, RotateCcw, Trophy, XCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Trophy, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { attemptsApi, getAttemptErrorMessage } from '../api/attempts'
@@ -85,7 +85,7 @@ export default function AttemptResultPage() {
       <h1>Kết quả bài làm</h1>
       <p className="form-error" role="alert">{current.message}</p>
       <div className="exam-actions">
-        {current.canContinue && examId && <Link className="button button-primary button-inline" to={`/exams/${examId}/take`}>Tiếp tục bài <ArrowRight size={17} aria-hidden="true" /></Link>}
+        {current.canContinue && examId && <Link className="button button-primary button-inline" to={`/exams/${examId}/take`}>Tiếp tục bài</Link>}
         <button className="button button-secondary button-inline" type="button" onClick={() => setVersion((value) => value + 1)}>Thử lại</button>
         <Link className="text-link" to="/history">Về lịch sử làm bài</Link>
       </div>
@@ -120,8 +120,8 @@ export default function AttemptResultPage() {
       <div><dt>Nộp bài</dt><dd>{formatDate(attempt.submittedAt)}</dd></div>
     </dl>
     <div className="exam-actions">
-      <Link className="button button-primary button-inline" to={`/exams/${attempt.examId}`}><RotateCcw size={17} aria-hidden="true" /> Làm lại đề này</Link>
-      <Link className="button button-secondary button-inline" to="/exams">Chọn đề khác <ArrowRight size={17} aria-hidden="true" /></Link>
+      <Link className="button button-primary button-inline" to={`/exams/${attempt.examId}`}>Làm lại đề này</Link>
+      <Link className="button button-secondary button-inline" to="/exams">Chọn đề khác</Link>
     </div>
 
     <section className="result-review" aria-labelledby="answer-review-heading">

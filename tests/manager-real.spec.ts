@@ -45,6 +45,7 @@ test.describe('Manager → học sinh → kết quả với API và MongoDB th�
     await page.getByRole('link', { name: 'Tạo đề thi', exact: true }).click()
     await page.getByLabel('Tên đề thi', { exact: true }).fill(fixture.title)
     await page.getByLabel('Thời gian làm bài (phút)', { exact: true }).fill('15')
+    await page.getByLabel('Số lần làm tối đa', { exact: true }).fill('5')
     await createWithQuestion(page, 'Câu kiểm thử thứ nhất', 1)
     await expect(page).toHaveURL(/\/manage\/exams\/[a-f\d]{24}$/)
     const examId = new URL(page.url()).pathname.split('/').pop()!

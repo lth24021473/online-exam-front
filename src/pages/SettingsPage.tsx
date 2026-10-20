@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { LogOut, Moon } from 'lucide-react'
+import { Moon } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { useTheme } from '../theme/useTheme'
 import './SettingsPage.css'
@@ -45,7 +45,7 @@ export default function SettingsPage() {
         <h3>Tài khoản</h3>
         <p className="account-settings-email">{user.email}</p>
         <button className="account-action-button settings-logout" type="button" disabled={signingOut} onClick={() => { void handleLogout() }}>
-          <LogOut size={17} aria-hidden="true" />{signingOut ? 'Đang đăng xuất…' : 'Đăng xuất tài khoản'}
+          {signingOut ? 'Đang đăng xuất…' : 'Đăng xuất tài khoản'}
         </button>
       </div>
     </section>

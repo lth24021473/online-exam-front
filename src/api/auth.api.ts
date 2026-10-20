@@ -7,6 +7,10 @@ export interface AuthUser {
   email: string
   fullName: string
   role: AuthRole
+  avatar?: string | null
+  cover?: string | null
+  workplace?: string | null
+  currentResidence?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -45,6 +49,17 @@ export const authApi = {
 
   async me(signal?: AbortSignal): Promise<AuthUser> {
     const { data } = await api.get<AuthUser>('/users/me', { signal })
+    return data
+  },
+
+  async updateProfile(payload: {
+    fullName?: string
+    avatar?: string | null
+    cover?: string | null
+    workplace?: string | null
+    currentResidence?: string | null
+  }): Promise<AuthUser> {
+    const { data } = await api.patch<AuthUser>('/users/me', payload)
     return data
   },
 

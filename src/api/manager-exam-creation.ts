@@ -12,14 +12,37 @@ interface DraftSession {
   deleting: Set<string>
 }
 
+function normalizeMetadata(payload: ExamPayload): ExamPayload {
+  return {
+    title: payload.title,
+    description: payload.description ?? '',
+    instructions: payload.instructions ?? '',
+    durationMinutes: payload.durationMinutes,
+    ...(payload.opensAt ? { opensAt: payload.opensAt } : {}),
+    ...(payload.closesAt ? { closesAt: payload.closesAt } : {}),
+    ...(payload.maxAttempts && payload.maxAttempts > 1 ? { maxAttempts: payload.maxAttempts } : {}),
+  }
+}
+
 function metadata(exam: ManagerExam): ExamPayload {
-  return { title: exam.title, description: exam.description ?? '', instructions: exam.instructions ?? '', durationMinutes: exam.durationMinutes }
+  return normalizeMetadata({
+    title: exam.title,
+    description: exam.description ?? '',
+    instructions: exam.instructions ?? '',
+    durationMinutes: exam.durationMinutes,
+    opensAt: exam.opensAt,
+    closesAt: exam.closesAt,
+    maxAttempts: exam.maxAttempts,
+  })
 }
 function questionPayload(question: ManagerQuestion): QuestionPayload {
   const options = [...question.options].sort((left, right) => left.position - right.position)
   return { content: question.content, position: question.position, options: options.map((option) => option.content), correctOptionIndex: options.findIndex((option) => option.isCorrect) }
 }
 function equal(left: ExamPayload | QuestionPayload, right: ExamPayload | QuestionPayload) {
+  if ('title' in left && 'title' in right) {
+    return JSON.stringify(normalizeMetadata(left)) === JSON.stringify(normalizeMetadata(right))
+  }
   return JSON.stringify(left) === JSON.stringify(right)
 }
 

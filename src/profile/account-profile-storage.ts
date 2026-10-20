@@ -23,8 +23,25 @@ export function normalizeAccountProfile(draft: AccountProfile): AccountProfile {
   return { fullName, workplace, currentResidence }
 }
 
-export function readAccountProfile(userId: string, defaultFullName: string): AccountProfile {
-  const fallback = { fullName: defaultFullName, workplace: '', currentResidence: '' }
+export function recordProfileSync(userId: string, timestamp: number | string = Date.now()) {
+  try {
+    const time = typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime()
+    if (time > 0) {
+      localStorage.setItem(`online-exam.profile-sync.${userId}`, String(time))
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function readAccountProfile(
+  userId: string,
+  defaultFullName: string,
+  defaultWorkplace = '',
+  defaultResidence = '',
+  serverUpdatedAt?: string,
+): AccountProfile {
+  const fallback = { fullName: defaultFullName, workplace: defaultWorkplace, currentResidence: defaultResidence }
   try {
     const stored = localStorage.getItem(`${storagePrefix}${userId}`)
     if (!stored) return fallback
@@ -32,10 +49,30 @@ export function readAccountProfile(userId: string, defaultFullName: string): Acc
     if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback
     const fields = value as Record<string, unknown>
     if (typeof fields.fullName !== 'string' || typeof fields.workplace !== 'string' || typeof fields.currentResidence !== 'string') return fallback
+
+    const syncRaw = localStorage.getItem(`online-exam.profile-sync.${userId}`)
+    const lastSyncTime = syncRaw ? Number(syncRaw) || new Date(syncRaw).getTime() : 0
+    const serverTime = serverUpdatedAt ? new Date(serverUpdatedAt).getTime() : 0
+
+    if (serverTime > 0 && serverTime > lastSyncTime) {
+      const serverProfile: AccountProfile = {
+        fullName: defaultFullName || fields.fullName,
+        workplace: defaultWorkplace || fields.workplace,
+        currentResidence: defaultResidence || fields.currentResidence,
+      }
+      try {
+        localStorage.setItem(`${storagePrefix}${userId}`, JSON.stringify(serverProfile))
+        recordProfileSync(userId, serverTime)
+      } catch {
+        // ignore cache write error
+      }
+      return normalizeAccountProfile(serverProfile)
+    }
+
     return normalizeAccountProfile({
       fullName: fields.fullName,
-      workplace: fields.workplace,
-      currentResidence: fields.currentResidence,
+      workplace: fields.workplace || defaultWorkplace,
+      currentResidence: fields.currentResidence || defaultResidence,
     })
   } catch {
     return fallback
@@ -46,6 +83,7 @@ export function writeAccountProfile(userId: string, draft: AccountProfile): Acco
   const profile = normalizeAccountProfile(draft)
   try {
     localStorage.setItem(`${storagePrefix}${userId}`, JSON.stringify(profile))
+    recordProfileSync(userId, Date.now())
   } catch (error) {
     const isQuotaError = error instanceof DOMException &&
       ['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REACHED'].includes(error.name)
@@ -55,3 +93,4 @@ export function writeAccountProfile(userId: string, draft: AccountProfile): Acco
   }
   return profile
 }
+

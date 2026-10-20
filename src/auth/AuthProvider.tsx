@@ -79,6 +79,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('online', reconnect)
   }, [])
 
+  const updateUser = useCallback((user: AuthUser) => {
+    setSession((cur) => (cur.token && cur.user?.id === user.id)
+      ? { ...cur, user }
+      : cur)
+  }, [])
+
+  const refreshUser = useCallback(async () => {
+    if (!session.token) return null
+    try {
+      const freshUser = await authApi.me()
+      setSession((cur) => {
+        if (!cur.token || cur.user?.id !== freshUser.id) return cur
+        if (
+          cur.user?.fullName === freshUser.fullName &&
+          cur.user?.avatar === freshUser.avatar &&
+          cur.user?.cover === freshUser.cover &&
+          cur.user?.workplace === freshUser.workplace &&
+          cur.user?.currentResidence === freshUser.currentResidence &&
+          cur.user?.role === freshUser.role &&
+          cur.user?.updatedAt === freshUser.updatedAt
+        ) {
+          return cur
+        }
+        return { ...cur, user: freshUser }
+      })
+      return freshUser
+    } catch {
+      return null
+    }
+  }, [session.token])
+
+  useEffect(() => {
+    if (!session.token) return
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible' && session.token) {
+        refreshUser()
+      }
+    }
+    window.addEventListener('focus', onVisibilityOrFocus)
+    document.addEventListener('visibilitychange', onVisibilityOrFocus)
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible' && session.token) {
+        refreshUser()
+      }
+    }, 4000)
+
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('focus', onVisibilityOrFocus)
+      document.removeEventListener('visibilitychange', onVisibilityOrFocus)
+    }
+  }, [session.token, refreshUser])
+
   const authenticate = useCallback((response: AuthResponse) => {
     setRestoreError('')
     setSessionNotice('')
@@ -104,11 +157,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionNotice,
     authenticate,
     logout,
-  }), [session.user, session.loading, sessionNotice, authenticate, logout])
+    updateUser,
+    refreshUser,
+  }), [session.user, session.loading, sessionNotice, authenticate, logout, updateUser, refreshUser])
 
   return <AuthContext.Provider value={value}>{session.token && session.loading && restoreError
     ? <div className="route-loading"><section className="exam-panel"><h1>Chưa thể kiểm tra phiên đăng nhập</h1><p className="form-error" role="alert">{restoreError}</p><p>Kết nối lại để tiếp tục bài làm. Thời gian làm bài vẫn tiếp tục chạy.</p><div className="exam-actions"><button className="button button-primary button-inline" onClick={() => { setRestoreError(''); setRetry((value) => value + 1) }}>Thử lại kết nối</button><button className="button button-inline exam-button-secondary" onClick={clearSession}>Về đăng nhập</button></div></section></div>
     : children}</AuthContext.Provider>
+
 }
 
 export default AuthProvider

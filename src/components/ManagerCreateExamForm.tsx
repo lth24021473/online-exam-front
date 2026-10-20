@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { KeyboardEvent, SubmitEvent } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
 import type { ExamPayload, QuestionPayload } from '../api/manager-exams'
 import './ManagerCreateExamForm.css'
 
@@ -28,6 +27,9 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [minutes, setMinutes] = useState('15')
+  const [opensAt, setOpensAt] = useState('')
+  const [closesAt, setClosesAt] = useState('')
+  const [maxAttempts, setMaxAttempts] = useState('1')
   const [questions, setQuestions] = useState<DraftQuestion[]>([{
     id: 1, content: '', correctOptionId: null,
     options: [2, 3, 4, 5].map((id) => ({ id, content: '' })),
@@ -97,6 +99,13 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
     if (!Number.isSafeInteger(durationMinutes) || durationMinutes < 1) {
       fail(durationId, 'Thời gian làm bài phải là số nguyên từ 1 phút.'); return
     }
+    const attempts = Number(maxAttempts)
+    if (!Number.isSafeInteger(attempts) || attempts < 1) {
+      fail(`${formId}-max-attempts`, 'Số lần làm tối đa phải là số nguyên từ 1.'); return
+    }
+    if (opensAt && closesAt && new Date(opensAt).getTime() >= new Date(closesAt).getTime()) {
+      fail(`${formId}-opens-at`, 'Thời gian mở đề phải trước thời gian đóng đề.'); return
+    }
     if (questions.length === 0) {
       fail(`${formId}-add-question`, 'Hãy thêm ít nhất một câu hỏi.'); return
     }
@@ -121,8 +130,17 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
         options: question.options.map((option) => option.content.trim()), correctOptionIndex,
       })
     }
+    const examData: ExamPayload = {
+      title: title.trim(),
+      description: description.trim(),
+      instructions: '',
+      durationMinutes,
+      ...(opensAt ? { opensAt: new Date(opensAt).toISOString() } : {}),
+      ...(closesAt ? { closesAt: new Date(closesAt).toISOString() } : {}),
+      ...(attempts > 1 ? { maxAttempts: attempts } : {}),
+    }
     setConfirmation({
-      exam: { title: title.trim(), description: description.trim(), instructions: '', durationMinutes },
+      exam: examData,
       questions: payload,
     })
   }
@@ -171,6 +189,9 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
             <div className="manager-create-field"><label htmlFor={titleId}>Tên đề thi</label><input id={titleId} required maxLength={200} value={title} {...fieldError(titleId)} onChange={(event) => { setTitle(event.target.value); setValidation(null) }} /></div>
             <div className="manager-create-field"><label htmlFor={`${formId}-description`}>Mô tả</label><textarea id={`${formId}-description`} rows={3} value={description} onChange={(event) => setDescription(event.target.value)} /></div>
             <div className="manager-create-field"><label htmlFor={durationId}>Thời gian làm bài (phút)</label><input id={durationId} type="number" min={1} step={1} required value={minutes} {...fieldError(durationId)} onChange={(event) => { setMinutes(event.target.value); setValidation(null) }} /></div>
+            <div className="manager-create-field"><label htmlFor={`${formId}-max-attempts`}>Số lần làm tối đa</label><input id={`${formId}-max-attempts`} type="number" min={1} step={1} required value={maxAttempts} {...fieldError(`${formId}-max-attempts`)} onChange={(event) => { setMaxAttempts(event.target.value); setValidation(null) }} /></div>
+            <div className="manager-create-field"><label htmlFor={`${formId}-opens-at`}>Thời gian mở đề tự động (tùy chọn)</label><input id={`${formId}-opens-at`} type="datetime-local" value={opensAt} {...fieldError(`${formId}-opens-at`)} onChange={(event) => { setOpensAt(event.target.value); setValidation(null) }} /></div>
+            <div className="manager-create-field"><label htmlFor={`${formId}-closes-at`}>Thời gian đóng đề tự động (tùy chọn)</label><input id={`${formId}-closes-at`} type="datetime-local" value={closesAt} {...fieldError(`${formId}-closes-at`)} onChange={(event) => { setClosesAt(event.target.value); setValidation(null) }} /></div>
           </div>
         </section>
 
@@ -179,7 +200,7 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
           {questions.map((question, index) => <section className="exam-panel manager-create-question" key={question.id} role="group" aria-labelledby={`${formId}-question-heading-${question.id}`}>
             <div className="manager-create-question-heading">
               <h3 id={`${formId}-question-heading-${question.id}`}>Câu hỏi {index + 1}</h3>
-              <button type="button" className="manager-text-button manager-create-remove" disabled={questions.length <= 1} aria-label={`Xóa câu hỏi ${index + 1}`} onClick={() => { setQuestions((current) => current.filter((item) => item.id !== question.id)); setValidation(null) }}><Trash2 size={16} aria-hidden="true" />Xóa câu hỏi</button>
+              <button type="button" className="manager-text-button manager-create-remove" disabled={questions.length <= 1} aria-label={`Xóa câu hỏi ${index + 1}`} onClick={() => { setQuestions((current) => current.filter((item) => item.id !== question.id)); setValidation(null) }}>Xóa câu hỏi</button>
             </div>
             <div className="manager-create-field"><label htmlFor={`${formId}-question-${question.id}`}>Nội dung câu hỏi</label><textarea id={`${formId}-question-${question.id}`} required rows={3} value={question.content} {...fieldError(`${formId}-question-${question.id}`)} onChange={(event) => editQuestion(question.id, (item) => ({ ...item, content: event.target.value }))} /></div>
             <fieldset className="manager-options"><legend>Các đáp án — chọn một đáp án đúng</legend>
@@ -189,9 +210,9 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
                 <button type="button" className="manager-text-button" disabled={question.options.length <= 2} aria-label={`Bỏ đáp án ${optionIndex + 1}`} onClick={() => removeOption(question.id, option.id)}>Bỏ</button>
               </div>)}
             </fieldset>
-            <button type="button" className="button button-secondary button-inline manager-create-add-option" disabled={question.options.length >= 20} onClick={() => { const id = nextId.current++; editQuestion(question.id, (item) => item.options.length >= 20 ? item : { ...item, options: [...item.options, { id, content: '' }] }) }}><Plus size={16} aria-hidden="true" />Thêm đáp án</button>
+            <button type="button" className="button button-secondary button-inline manager-create-add-option" disabled={question.options.length >= 20} onClick={() => { const id = nextId.current++; editQuestion(question.id, (item) => item.options.length >= 20 ? item : { ...item, options: [...item.options, { id, content: '' }] }) }}>Thêm đáp án</button>
           </section>)}
-          <button id={`${formId}-add-question`} type="button" className="button button-secondary button-inline manager-create-add-question" onClick={addQuestion}><Plus size={18} aria-hidden="true" />Thêm câu hỏi</button>
+          <button id={`${formId}-add-question`} type="button" className="button button-secondary button-inline manager-create-add-question" onClick={addQuestion}>Thêm câu hỏi</button>
         </section>
 
         <div className="manager-create-footer">

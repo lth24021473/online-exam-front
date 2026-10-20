@@ -1,12 +1,19 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
+import { authApi } from '../api/auth.api'
+import { useAuth } from '../auth/useAuth'
 
 const allowedTypes = new Set(['image/png', 'image/jpeg', 'image/webp'])
 const maxFileSize = 2 * 1024 * 1024
-const dataUrlPattern = /^data:image\/(?:png|jpeg|webp);base64,(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/
 
-function isImageDataUrl(value: string | null): value is string {
-  return Boolean(value && !value.endsWith(',') && dataUrlPattern.test(value))
+function isValidImageSource(value: string | null): value is string {
+  if (!value || typeof value !== 'string') return false
+  const trimmed = value.trim()
+  return trimmed.startsWith('data:image/') ||
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('/') ||
+    trimmed.startsWith('blob:')
 }
 
 function storageError(error: unknown) {
@@ -28,7 +35,7 @@ function readImage(file: File, kind: 'avatar' | 'cover'): Promise<string> {
       : 'Đọc ảnh bị gián đoạn. Vui lòng thử lại.'))
     reader.onload = () => {
       const result = reader.result
-      if (typeof result === 'string' && isImageDataUrl(result)) resolve(result)
+      if (typeof result === 'string' && isValidImageSource(result)) resolve(result)
       else reject(new Error(kind === 'cover'
         ? 'Tệp ảnh bìa không hợp lệ. Vui lòng chọn ảnh PNG, JPG hoặc WebP khác.'
         : 'Tệp ảnh không hợp lệ. Vui lòng chọn ảnh PNG, JPG hoặc WebP khác.'))
@@ -37,21 +44,43 @@ function readImage(file: File, kind: 'avatar' | 'cover'): Promise<string> {
   })
 }
 
-export function useProfileImage(userId: string, kind: 'avatar' | 'cover') {
+export function useProfileImage(userId: string, kind: 'avatar' | 'cover', initialUrl?: string | null) {
+  const { updateUser } = useAuth()
   const storageKey = `online-exam.${kind}.${userId}`
   const imageLabel = kind === 'avatar' ? 'Ảnh đại diện' : 'Ảnh bìa'
   const [image, setImage] = useState<string | null>(() => {
     try {
+      if (initialUrl !== undefined) {
+        if (isValidImageSource(initialUrl)) return initialUrl
+        if (initialUrl === null) return null
+      }
       const stored = localStorage.getItem(storageKey)
-      return isImageDataUrl(stored) ? stored : null
-    } catch {
+      if (isValidImageSource(stored)) return stored
       return null
+    } catch {
+      return initialUrl ?? null
     }
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useAutoDismissNotice()
   const updating = useRef(false)
+
+
+  useEffect(() => {
+    if (initialUrl !== undefined) {
+      setImage(initialUrl)
+      try {
+        if (initialUrl) {
+          localStorage.setItem(storageKey, initialUrl)
+        } else {
+          localStorage.removeItem(storageKey)
+        }
+      } catch {
+        // ignore storage error
+      }
+    }
+  }, [initialUrl, storageKey])
 
   async function updateImage(file: File) {
     setError('')
@@ -90,9 +119,21 @@ export function useProfileImage(userId: string, kind: 'avatar' | 'cover') {
       try {
         localStorage.setItem(storageKey, dataUrl)
       } catch (storageFailure) {
-        throw new Error(storageError(storageFailure), { cause: storageFailure })
+        const isQuotaError = storageFailure instanceof DOMException &&
+          ['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REACHED'].includes(storageFailure.name)
+        if (!isQuotaError) {
+          throw new Error(storageError(storageFailure), { cause: storageFailure })
+        }
       }
       setImage(dataUrl)
+      try {
+        const updatedUser = await authApi.updateProfile({ [kind]: dataUrl })
+        if (updatedUser) {
+          updateUser(updatedUser)
+        }
+      } catch {
+        // Background sync tolerance
+      }
       setNotice(`${imageLabel} đã được lưu trên trình duyệt này.`)
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : `Không thể cập nhật ${imageLabel.toLowerCase()}. Vui lòng thử lại.`)
@@ -109,6 +150,13 @@ export function useProfileImage(userId: string, kind: 'avatar' | 'cover') {
     try {
       localStorage.removeItem(storageKey)
       setImage(null)
+      authApi.updateProfile({ [kind]: null }).then((updatedUser) => {
+        if (updatedUser) {
+          updateUser(updatedUser)
+        }
+      }).catch(() => {
+        // Sync in background
+      })
       setNotice(`${imageLabel} đã được xóa trên trình duyệt này.`)
     } catch (storageFailure) {
       setError(storageError(storageFailure))

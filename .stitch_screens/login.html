@@ -1,0 +1,361 @@
+<!DOCTYPE html><html class="h-full" lang="vi"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Đăng Nhập - Hệ Thống Thi Trực Tuyến</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;700;800;900&amp;display=swap" rel="stylesheet">
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-secondary-fixed": "#1a1a1a",
+            "surface-container-high": "#e8e3da",
+            "tertiary": "#0055ff",
+            "secondary-container": "#ffdad6",
+            "on-primary-fixed": "#1a1a1a",
+            "on-surface-variant": "#4a4a4a",
+            "on-surface": "#1a1a1a",
+            "error-container": "#ffdad6",
+            "on-tertiary-fixed": "#1a1a1a",
+            "on-error": "#ffffff",
+            "on-tertiary-fixed-variant": "#1a1a1a",
+            "error": "#cc0000",
+            "surface-variant": "#e8e3da",
+            "on-primary-container": "#1a1a1a",
+            "outline": "#1a1a1a",
+            "surface-container": "#eee9e0",
+            "surface-bright": "#faf7f2",
+            "inverse-on-surface": "#f5f0e8",
+            "tertiary-fixed": "#d6e3ff",
+            "secondary-fixed-dim": "#ffb3ab",
+            "on-primary-fixed-variant": "#1a1a1a",
+            "on-error-container": "#93000a",
+            "inverse-primary": "#f5f0e8",
+            "secondary": "#e63b2e",
+            "on-secondary": "#1a1a1a",
+            "primary-fixed-dim": "#e6b800",
+            "background": "#f5f0e8",
+            "surface-tint": "#1a1a1a",
+            "on-primary": "#ffffff",
+            "surface": "#f5f0e8",
+            "primary-container": "#ffcc00",
+            "on-background": "#1a1a1a",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f2ede5",
+            "on-secondary-container": "#1a1a1a",
+            "tertiary-container": "#d6e3ff",
+            "primary": "#1a1a1a",
+            "outline-variant": "#d0cbc3",
+            "on-secondary-fixed-variant": "#1a1a1a",
+            "surface-dim": "#d6d1c9"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "fontFamily": {
+            "headline": ["Space Grotesk"],
+            "display": ["Space Grotesk"],
+            "body": ["Inter"],
+            "label": ["Space Grotesk"]
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen flex flex-col selection:bg-primary-container selection:text-on-primary-container">
+<!-- Main Bauhaus Split Screen Canvas -->
+<main class="flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-screen border-outline">
+<!-- LEFT PANEL: Visual Identity & Bauhaus System Showcase (7 Cols) -->
+<section class="lg:col-span-7 bg-surface-container-low border-b-4 lg:border-b-0 lg:border-r-4 border-outline p-8 sm:p-12 lg:p-16 flex flex-col justify-between relative overflow-hidden">
+<!-- Geometric Bauhaus Decorative Background Shapes -->
+<div class="absolute -top-16 -left-16 w-64 h-64 rounded-full border-4 border-outline bg-primary-container opacity-40 pointer-events-none"></div>
+<div class="absolute top-1/3 -right-24 w-80 h-80 bg-secondary border-4 border-outline opacity-20 pointer-events-none rotate-12"></div>
+<div class="absolute bottom-10 left-1/4 w-32 h-32 bg-tertiary border-4 border-outline opacity-25 pointer-events-none"></div>
+<!-- Top Header / Brand Stamp -->
+<div class="relative z-10 flex items-center justify-between gap-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 bg-primary text-background border-2 border-outline flex items-center justify-center font-headline font-black text-2xl shadow-[4px_4px_0px_0px_#1a1a1a]">
+            THI
+          </div>
+<div>
+<span class="font-headline font-black tracking-tighter text-xl uppercase block text-primary leading-tight">
+              Hệ Thống Khảo Thí Quốc Gia
+            </span>
+<span class="font-label text-xs uppercase tracking-widest text-on-surface-variant font-bold">
+              Tiêu chuẩn Đánh giá Năng lực Việt Nam
+            </span>
+</div>
+</div>
+<div class="hidden sm:inline-flex items-center gap-1 bg-surface-container-lowest px-3 py-1.5 border-2 border-outline font-label text-xs font-black shadow-[3px_3px_0px_0px_#1a1a1a]">
+<span class="w-2.5 h-2.5 bg-secondary rounded-full inline-block animate-pulse"></span>
+          MÁY CHỦ BẢO MẬT: TRỰC TUYẾN
+        </div>
+</div>
+<!-- Hero Message & Manifesto -->
+<div class="relative z-10 my-12 lg:my-16 max-w-xl">
+<div class="inline-block bg-primary text-inverse-on-surface font-headline font-bold text-xs uppercase px-3 py-1 mb-4 border-2 border-outline">
+          Nền tảng thi tập trung v4.2
+        </div>
+<h1 class="font-headline font-black text-4xl sm:text-5xl lg:text-6xl uppercase tracking-tight text-primary leading-[1.05]">
+          Khảo Thí Chuẩn Hóa. <span class="bg-primary-container px-2 border-2 border-outline inline-block mt-1 shadow-[4px_4px_0px_0px_#1a1a1a]">Minh Bạch.</span>
+</h1>
+<p class="mt-6 text-base sm:text-lg text-on-surface font-medium leading-relaxed max-w-lg">
+          Giải pháp công nghệ tổ chức kỳ thi quốc gia trực tuyến với cấu trúc kỷ luật cao, quy trình khảo thí đồng bộ và độ trễ phản hồi bằng 0.
+        </p>
+<!-- Dynamic Visual Feature Card -->
+<div class="mt-8 relative border-4 border-outline bg-surface-container-lowest p-2 shadow-[6px_6px_0px_0px_#1a1a1a]">
+<div class="h-44 sm:h-52 w-full overflow-hidden border-2 border-outline relative">
+<img class="w-full h-full object-cover grayscale contrast-125" data-alt="A vivid Bauhaus graphic design composition inspired by academic rigor, showing clean geometric forms, high-contrast black contours, yellow ochre surfaces, and ultramarine spheres. Bright daylight atmosphere emphasizing sharp geometric balance and crisp contrast on warm archival paper texture." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDt1BSVitXS1kBIBsFAnuoPu96MhvzscYhD_xO-5MrxRyHxhJSFZ4lRMcxIilC3mUwk2ISMfjyKLfLf4A4pkcjYh-u8_U21AegoA_tcl6IXuFQHfyGZKsxrlEhc5cXqPenj2yFPOSHM80VMiWbU4A0HWC9BJKyx-4abo-0Xs996IyIqjvSjKUVnVvdhmYirnTvA4U9FhRp3drXljXOl9hkTZicoXkXP7VL4su7Cy-esheSevXvfLOHV">
+<div class="absolute inset-0 bg-primary-container mix-blend-multiply opacity-25 pointer-events-none"></div>
+<div class="absolute bottom-3 left-3 bg-surface-container-lowest px-3 py-1 font-label text-xs font-black uppercase border-2 border-outline tracking-wider">
+              Mã chứng nhận an toàn: VN-ET-9024
+            </div>
+</div>
+</div>
+</div>
+<!-- 3 Commitments: Asymmetric Bauhaus Grid -->
+<div class="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t-2 border-outline">
+<!-- Commitment 1 -->
+<div class="border-2 border-outline bg-surface p-4 shadow-[4px_4px_0px_0px_#1a1a1a] flex flex-col justify-between hover:bg-surface-container-high transition-none">
+<div class="flex items-center justify-between mb-3">
+<span class="w-8 h-8 bg-secondary text-inverse-on-surface border-2 border-outline flex items-center justify-center font-bold">
+<span class="material-symbols-outlined text-lg" data-icon="lock">lock</span>
+</span>
+<span class="font-headline font-black text-xs">01</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-sm uppercase tracking-tight text-primary">Bảo Mật Tuyệt Đối</h2>
+<p class="text-xs text-on-surface-variant font-medium mt-1 leading-snug">Mã hóa đa tầng theo chuẩn khảo thí Nhà nước.</p>
+</div>
+</div>
+<!-- Commitment 2 -->
+<div class="border-2 border-outline bg-primary-container p-4 shadow-[4px_4px_0px_0px_#1a1a1a] flex flex-col justify-between">
+<div class="flex items-center justify-between mb-3">
+<span class="w-8 h-8 bg-primary text-on-primary border-2 border-outline flex items-center justify-center font-bold">
+<span class="material-symbols-outlined text-lg" data-icon="visibility">visibility</span>
+</span>
+<span class="font-headline font-black text-xs">02</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-sm uppercase tracking-tight text-on-primary-container">Giám Sát AI</h2>
+<p class="text-xs text-on-surface font-semibold mt-1 leading-snug">Theo dõi hành vi gian lận và khóa cửa sổ thi tự động.</p>
+</div>
+</div>
+<!-- Commitment 3 -->
+<div class="border-2 border-outline bg-surface p-4 shadow-[4px_4px_0px_0px_#1a1a1a] flex flex-col justify-between hover:bg-surface-container-high transition-none">
+<div class="flex items-center justify-between mb-3">
+<span class="w-8 h-8 bg-tertiary text-on-tertiary border-2 border-outline flex items-center justify-center font-bold">
+<span class="material-symbols-outlined text-lg" data-icon="bolt">bolt</span>
+</span>
+<span class="font-headline font-black text-xs">03</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-sm uppercase tracking-tight text-primary">Chấm Điểm Tức Thì</h2>
+<p class="text-xs text-on-surface-variant font-medium mt-1 leading-snug">Xử lý kết quả câu hỏi trắc nghiệm &amp; phân tích độ lệch.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- RIGHT PANEL: Authentication Terminal & Form (5 Cols) -->
+<section class="lg:col-span-5 bg-background p-6 sm:p-10 lg:p-14 flex flex-col justify-center">
+<div class="max-w-md w-full mx-auto">
+<!-- Header Banner -->
+<div class="border-b-4 border-outline pb-6 mb-8">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label text-xs font-bold uppercase tracking-widest text-secondary flex items-center gap-1.5">
+<span class="w-2 h-2 bg-secondary inline-block"></span>
+              Cổng Xác Thực Một Điểm (SSO)
+            </span>
+<span class="font-label text-xs font-black px-2 py-0.5 bg-surface-container-high border border-outline">
+              PHIÊN 2024.B
+            </span>
+</div>
+<h2 class="font-headline font-black text-2xl sm:text-3xl uppercase tracking-tight text-primary leading-tight">
+            Đăng Nhập Hệ Thống Thi Trực Tuyến
+          </h2>
+<p class="text-xs sm:text-sm text-on-surface-variant font-medium mt-2">
+            Vui lòng nhập tài khoản trường/tổ chức cung cấp
+          </p>
+</div>
+<!-- Quick Role Switcher -->
+<div class="mb-6">
+<label class="block font-label text-xs uppercase font-extrabold tracking-wider text-primary mb-2">
+            Chọn Phân Quyền Thử Nghiệm Nhanh
+          </label>
+<div aria-label="Phân quyền đăng nhập" class="grid grid-cols-3 gap-2" role="group">
+<button class="role-btn bg-primary-container text-on-primary-container border-2 border-outline py-2.5 px-3 font-label text-xs font-extrabold uppercase shadow-[3px_3px_0px_0px_#1a1a1a] transition-none flex items-center justify-center gap-1.5" id="role-student" onclick="selectRole('student')" type="button">
+<span class="material-symbols-outlined text-base" data-icon="school">school</span>
+              Sinh viên
+            </button>
+<button class="role-btn bg-surface-container-lowest text-on-surface border-2 border-outline py-2.5 px-3 font-label text-xs font-bold uppercase shadow-[3px_3px_0px_0px_#1a1a1a] hover:bg-surface-container-high transition-none flex items-center justify-center gap-1.5" id="role-teacher" onclick="selectRole('teacher')" type="button">
+<span class="material-symbols-outlined text-base" data-icon="assignment_ind">assignment_ind</span>
+              Giảng viên
+            </button>
+<button class="role-btn bg-surface-container-lowest text-on-surface border-2 border-outline py-2.5 px-3 font-label text-xs font-bold uppercase shadow-[3px_3px_0px_0px_#1a1a1a] hover:bg-surface-container-high transition-none flex items-center justify-center gap-1.5" id="role-admin" onclick="selectRole('admin')" type="button">
+<span class="material-symbols-outlined text-base" data-icon="admin_panel_settings">admin_panel_settings</span>
+              Quản trị viên
+            </button>
+</div>
+</div>
+<!-- Authentication Form -->
+<form class="space-y-6" onsubmit="handleAuth(event)">
+<!-- Input 1: Identifier -->
+<div class="relative">
+<label class="flex justify-between items-center font-label text-xs uppercase font-black tracking-wider text-primary mb-1" for="identifier">
+<span>Địa Chỉ Email / Tên Đăng Nhập</span>
+<span class="text-secondary text-[11px]">* BẮT BUỘC</span>
+</label>
+<div class="relative flex items-center border-b-4 border-outline bg-surface-container-lowest focus-within:bg-surface-bright focus-within:border-tertiary">
+<span class="pl-3.5 pr-2 text-on-surface flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-xl" data-icon="account_circle">account_circle</span>
+</span>
+<input class="w-full py-3 pr-4 bg-transparent border-0 focus:ring-0 text-sm font-medium text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none" id="identifier" name="identifier" placeholder="Ví dụ: sv.nguyenvana@daihoc.edu.vn" required="" type="text" value="sinhvien_demo@edu.vn">
+</div>
+</div>
+<!-- Input 2: Password with reveal toggle -->
+<div class="relative">
+<div class="flex justify-between items-center font-label text-xs uppercase font-black tracking-wider text-primary mb-1">
+<label for="password">Mật Khẩu</label>
+<span class="text-secondary text-[11px]">* BẮT BUỘC</span>
+</div>
+<div class="relative flex items-center border-b-4 border-outline bg-surface-container-lowest focus-within:bg-surface-bright focus-within:border-tertiary">
+<span class="pl-3.5 pr-2 text-on-surface flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-xl" data-icon="key">key</span>
+</span>
+<input class="w-full py-3 pr-12 bg-transparent border-0 focus:ring-0 text-sm font-medium text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none" id="password" name="password" placeholder="Nhập mã bí mật của bạn" required="" type="password" value="••••••••••••">
+<button aria-label="Hiện hoặc ẩn mật khẩu" class="absolute right-2 text-on-surface-variant hover:text-primary p-1 flex items-center justify-center focus:outline-none" id="togglePasswordBtn" onclick="togglePasswordVisibility()" type="button">
+<span class="material-symbols-outlined text-xl" data-icon="visibility" id="eyeIcon">visibility</span>
+</button>
+</div>
+</div>
+<!-- Checkbox & Forgot Password Row -->
+<div class="flex items-center justify-between pt-1">
+<label class="flex items-center gap-2.5 cursor-pointer select-none">
+<input class="w-4 h-4 rounded-none border-2 border-outline text-primary focus:ring-0 focus:ring-offset-0 focus:outline-none cursor-pointer" id="remember" name="remember" type="checkbox">
+<span class="font-body text-xs font-semibold text-primary">Ghi nhớ đăng nhập</span>
+</label>
+<a class="font-label text-xs uppercase font-bold text-tertiary hover:underline decoration-2 underline-offset-2" href="#">
+              Quên mật khẩu?
+            </a>
+</div>
+<!-- Primary Submit Action -->
+<button class="w-full bg-primary text-background border-2 border-outline py-3.5 px-6 font-headline font-black text-sm uppercase tracking-wider shadow-[4px_4px_0px_0px_#ffcc00] hover:bg-primary-container hover:text-on-primary-container hover:shadow-[4px_4px_0px_0px_#1a1a1a] active:translate-x-0.5 active:translate-y-0.5 transition-none flex items-center justify-center gap-2" type="submit">
+<span>Đăng nhập vào hệ thống</span>
+<span class="material-symbols-outlined text-lg" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</form>
+<!-- Secondary SSO Options -->
+<div class="mt-8 pt-6 border-t-2 border-dashed border-outline-variant">
+<p class="font-label text-[11px] font-bold text-center uppercase tracking-wider text-on-surface-variant mb-4">
+            Hoặc xác thực qua định danh học đường
+          </p>
+<div class="grid grid-cols-2 gap-3">
+<button class="border-2 border-outline bg-surface-container-lowest p-2.5 text-xs font-bold text-on-surface flex items-center justify-center gap-2 shadow-[2px_2px_0px_0px_#1a1a1a] hover:bg-surface-container-high transition-none" type="button">
+<span class="material-symbols-outlined text-base text-tertiary" data-icon="badge">badge</span>
+<span>VNeID / Căn cước</span>
+</button>
+<button class="border-2 border-outline bg-surface-container-lowest p-2.5 text-xs font-bold text-on-surface flex items-center justify-center gap-2 shadow-[2px_2px_0px_0px_#1a1a1a] hover:bg-surface-container-high transition-none" type="button">
+<span class="material-symbols-outlined text-base text-secondary" data-icon="hub">hub</span>
+<span>EduID Liên kết</span>
+</button>
+</div>
+</div>
+<!-- Registration Link & Footer Callout -->
+<div class="mt-8 p-4 border-2 border-outline bg-surface-bright shadow-[3px_3px_0px_0px_#1a1a1a] text-center">
+<p class="font-body text-xs text-on-surface font-medium">
+            Chưa có tài khoản thí sinh hoặc giám thị?
+          </p>
+<a class="inline-block mt-2 font-headline font-black text-xs uppercase tracking-wider text-secondary border-b-2 border-secondary hover:text-primary hover:border-primary transition-none" href="#">
+            Chưa có tài khoản? Đăng ký dự thi ngay →
+          </a>
+</div>
+<!-- System Status Bar -->
+<div class="mt-6 flex items-center justify-between font-label text-[10px] text-on-surface-variant uppercase tracking-wider">
+<span>Hệ thống: Khảo thí 4.0</span>
+<span>Bảo mật SSL 256-Bit</span>
+<span>Hỗ trợ: 1900 6868</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Interactive Scripts -->
+<script>
+    // Quick Role Auto-Fill Interactive Switcher
+    function selectRole(role) {
+      const studentBtn = document.getElementById('role-student');
+      const teacherBtn = document.getElementById('role-teacher');
+      const adminBtn = document.getElementById('role-admin');
+      const identifierInput = document.getElementById('identifier');
+      const passwordInput = document.getElementById('password');
+
+      // Reset styles
+      const defaultClass = "role-btn bg-surface-container-lowest text-on-surface border-2 border-outline py-2.5 px-3 font-label text-xs font-bold uppercase shadow-[3px_3px_0px_0px_#1a1a1a] hover:bg-surface-container-high transition-none flex items-center justify-center gap-1.5";
+      const activeClass = "role-btn bg-primary-container text-on-primary-container border-2 border-outline py-2.5 px-3 font-label text-xs font-extrabold uppercase shadow-[3px_3px_0px_0px_#1a1a1a] transition-none flex items-center justify-center gap-1.5";
+
+      studentBtn.className = defaultClass;
+      teacherBtn.className = defaultClass;
+      adminBtn.className = defaultClass;
+
+      if (role === 'student') {
+        studentBtn.className = activeClass;
+        identifierInput.value = 'sinhvien_demo@edu.vn';
+        passwordInput.value = 'MatKhauSinhVien123';
+      } else if (role === 'teacher') {
+        teacherBtn.className = activeClass;
+        identifierInput.value = 'giangvien_toan@edu.vn';
+        passwordInput.value = 'GiaoVienChuan2024';
+      } else if (role === 'admin') {
+        adminBtn.className = activeClass;
+        identifierInput.value = 'quantri_khoathi@moet.edu.vn';
+        passwordInput.value = 'RootAdminSecurity#99';
+      }
+    }
+
+    // Toggle Password Visibility
+    function togglePasswordVisibility() {
+      const pwdInput = document.getElementById('password');
+      const eyeIcon = document.getElementById('eyeIcon');
+      
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        eyeIcon.textContent = 'visibility_off';
+      } else {
+        pwdInput.type = 'password';
+        eyeIcon.textContent = 'visibility';
+      }
+    }
+
+    // Handle Form Feedback
+    function handleAuth(event) {
+      event.preventDefault();
+      const identifier = document.getElementById('identifier').value;
+      const submitBtn = event.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `
+        <span class="w-4 h-4 border-2 border-background border-t-transparent animate-spin inline-block mr-2"></span>
+        ĐANG XÁC THỰC THÍ SINH...
+      `;
+
+      setTimeout(() => {
+        alert('Xác thực thành công cho tài khoản: ' + identifier + '\nChuyển hướng vào phòng thi...');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+      }, 1000);
+    }
+  </script>
+</body></html>

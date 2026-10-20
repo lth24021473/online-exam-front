@@ -1,0 +1,1637 @@
+﻿commit b2c2ecc4eef2fc3475c4a4c8d81fcc8da59ac57a
+Author: Lê Trung Hiếu <24021473@vnu.edu.vn>
+Date:   Tue Oct 20 09:03:05 2026 +0700
+
+    feat(api): implement ClassroomsController and strict exam scope isolation
+
+diff --git a/src/app.module.ts b/src/app.module.ts
+index 28028bf..dd64fcc 100644
+--- a/src/app.module.ts
++++ b/src/app.module.ts
+@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
+ import { AppService } from './app.service';
+ import { PrismaModule } from './database/prisma.module';
+ import { AuthModule } from './auth/auth.module';
++import { ClassroomsModule } from './classrooms/classrooms.module';
+ import { ExamsModule } from './exams/exams.module';
+ import { QuestionsModule } from './exams/questions/questions.module';
+ import { AttemptsModule } from './attempts/attempts.module';
+@@ -15,6 +16,7 @@ import { AttemptsModule } from './attempts/attempts.module';
+     }),
+     PrismaModule,
+     AuthModule,
++    ClassroomsModule,
+     ExamsModule,
+     QuestionsModule,
+     AttemptsModule,
+diff --git a/src/attempts/attempts.repository.ts b/src/attempts/attempts.repository.ts
+index d71e6c2..1edf5d5 100644
+--- a/src/attempts/attempts.repository.ts
++++ b/src/attempts/attempts.repository.ts
+@@ -4,7 +4,7 @@ import {
+   Injectable,
+   NotFoundException,
+ } from '@nestjs/common';
+-import { AttemptStatus, ExamStatus, Prisma } from '@prisma/client';
++import { AttemptStatus, ExamStatus, Prisma, Role } from '@prisma/client';
+ import { PrismaService } from '../database/prisma.service';
+ import { lockExamStatus } from '../exams/exam-write-conflict';
+ 
+@@ -63,11 +63,42 @@ export class AttemptsRepository {
+         instructions: true,
+         durationMinutes: true,
+         status: true,
++        opensAt: true,
++        closesAt: true,
++        maxAttempts: true,
++        managerId: true,
++        classroomId: true,
+         _count: { select: { questions: true } },
+       },
+     });
+   }
+ 
++  async isClassroomMember(classroomId: string, userId: string): Promise<boolean> {
++    const member = await this.prisma.classroomMember.findUnique({
++      where: {
++        classroomId_userId: {
++          classroomId,
++          userId,
++        },
++      },
++    });
++    return !!member;
++  }
++
++  async isUserAdmin(userId: string): Promise<boolean> {
++    const user = await this.prisma.user.findUnique({
++      where: { id: userId },
++      select: { role: true },
++    });
++    return user?.role === Role.ADMIN;
++  }
++
++  countSubmitted(userId: string, examId: string) {
++    return this.prisma.attempt.count({
++      where: { userId, examId, status: AttemptStatus.SUBMITTED },
++    });
++  }
++
+   findInProgress(userId: string, examId: string) {
+     return this.prisma.attempt.findFirst({
+       where: { userId, examId, status: AttemptStatus.IN_PROGRESS },
+diff --git a/src/attempts/attempts.service.ts b/src/attempts/attempts.service.ts
+index bff8433..3d918ec 100644
+--- a/src/attempts/attempts.service.ts
++++ b/src/attempts/attempts.service.ts
+@@ -1,5 +1,6 @@
+ import {
+   ConflictException,
++  ForbiddenException,
+   Injectable,
+   NotFoundException,
+ } from '@nestjs/common';
+@@ -23,6 +24,10 @@ type OwnedAttempt = NonNullable<
+ export class AttemptsService {
+   constructor(private readonly repo: AttemptsRepository) {}
+ 
++  createAttempt(userId: string, examId: string) {
++    return this.start(userId, examId);
++  }
++
+   async start(
+     userId: string,
+     examId: string,
+@@ -34,6 +39,23 @@ export class AttemptsService {
+     if (!exam || exam.status === ExamStatus.DRAFT) {
+       throw new NotFoundException('Exam not found');
+     }
++
++    if (exam.classroomId) {
++      const isMember = await this.repo.isClassroomMember(
++        exam.classroomId,
++        userId,
++      );
++      const isOwner = exam.managerId === userId;
++      let isAdmin = false;
++      if (!isMember && !isOwner) {
++        isAdmin = await this.repo.isUserAdmin(userId);
++      }
++      if (!isMember && !isOwner && !isAdmin) {
++        throw new ForbiddenException(
++          'Đề thi này chỉ dành cho học sinh trong lớp',
++        );
++      }
++    }
+     const existing = await this.repo.findInProgress(userId, examId);
+     if (existing) {
+       if (existing.deadlineAt.getTime() > Date.now()) {
+@@ -49,16 +71,37 @@ export class AttemptsService {
+       throw new ConflictException('Exam is closed');
+     }
+ 
++    if (exam.opensAt && Date.now() < exam.opensAt.getTime()) {
++      throw new ConflictException('Exam is not open yet');
++    }
++
++    if (exam.closesAt && Date.now() >= exam.closesAt.getTime()) {
++      throw new ConflictException('Exam is closed');
++    }
++
++    const maxAttempts = exam.maxAttempts ?? 1;
++    const submittedCount = await this.repo.countSubmitted(userId, examId);
++    if (submittedCount >= maxAttempts) {
++      throw new ConflictException(
++        `Maximum attempts reached (${submittedCount}/${maxAttempts})`,
++      );
++    }
++
+     const totalQuestions = exam._count.questions;
+     if (totalQuestions === 0) {
+       throw new ConflictException('Exam has no questions');
+     }
+ 
++    let deadlineAt = new Date(Date.now() + exam.durationMinutes * 60_000);
++    if (exam.closesAt && exam.closesAt.getTime() < deadlineAt.getTime()) {
++      deadlineAt = exam.closesAt;
++    }
++
+     const { attempt, resumed } = await this.repo.createOrResume({
+       userId,
+       examId,
+       totalQuestions,
+-      deadlineAt: new Date(Date.now() + exam.durationMinutes * 60_000),
++      deadlineAt,
+     });
+     if (resumed && attempt.deadlineAt.getTime() <= Date.now()) {
+       await this.finalize(attempt);
+diff --git a/src/classrooms/classrooms-exam-scope.spec.ts b/src/classrooms/classrooms-exam-scope.spec.ts
+new file mode 100644
+index 0000000..737d09e
+--- /dev/null
++++ b/src/classrooms/classrooms-exam-scope.spec.ts
+@@ -0,0 +1,369 @@
++import { ForbiddenException, NotFoundException } from '@nestjs/common';
++import { ExamStatus, Role } from '@prisma/client';
++import { ClassroomsController } from './classrooms.controller';
++import { ClassroomsService } from './classrooms.service';
++import { ExamsService } from '../exams/exams.service';
++import { ExamsRepository } from '../exams/exams.repository';
++import { AttemptsService } from '../attempts/attempts.service';
++import { AttemptsRepository } from '../attempts/attempts.repository';
++
++describe('Classrooms & Exam Scope Isolation', () => {
++  describe('Exam Scope Filtering in ExamsRepository / ExamsService', () => {
++    let examsService: ExamsService;
++    let mockExamsRepo: jest.Mocked<Partial<ExamsRepository>>;
++
++    beforeEach(() => {
++      mockExamsRepo = {
++        findAll: jest.fn(),
++        findManyByManager: jest.fn(),
++        findManyPublished: jest.fn(),
++        findByClassroom: jest.fn(),
++        findById: jest.fn(),
++        create: jest.fn(),
++        findClassroomById: jest.fn(),
++        isClassroomMember: jest.fn(),
++      };
++      examsService = new ExamsService(mockExamsRepo as any, {} as any);
++    });
++
++    it('hides class exams from student GET /exams (only returns public published exams)', async () => {
++      const publicExam = { id: 'exam-pub', title: 'Public Exam', status: ExamStatus.PUBLISHED, classroomId: null };
++      mockExamsRepo.findManyPublished!.mockResolvedValue([publicExam] as any);
++
++      const result = await examsService.findAll('student-1', Role.STUDENT);
++
++      expect(mockExamsRepo.findManyPublished).toHaveBeenCalled();
++      expect(result).toEqual([publicExam]);
++    });
++
++    it('hides class exams from manager GET /exams (only returns public manager exams)', async () => {
++      const managerPublicExam = { id: 'exam-mgr-pub', title: 'Mgr Exam', managerId: 'mgr-1', classroomId: null };
++      mockExamsRepo.findManyByManager!.mockResolvedValue([managerPublicExam] as any);
++
++      const result = await examsService.findAll('mgr-1', Role.EXAM_MANAGER);
++
++      expect(mockExamsRepo.findManyByManager).toHaveBeenCalledWith('mgr-1');
++      expect(result).toEqual([managerPublicExam]);
++    });
++
++    it('returns class exams only via findByClassroom', async () => {
++      const classExam = { id: 'exam-class-1', title: 'Class 10A1 Exam', classroomId: 'class-1' };
++      mockExamsRepo.findByClassroom!.mockResolvedValue([classExam] as any);
++
++      const result = await examsService.findByClassroom('class-1', Role.STUDENT);
++
++      expect(mockExamsRepo.findByClassroom).toHaveBeenCalledWith('class-1', Role.STUDENT);
++      expect(result).toEqual([classExam]);
++    });
++
++    it('throws ForbiddenException when manager creates exam for classroom they do not own', async () => {
++      mockExamsRepo.findClassroomById!.mockResolvedValue({
++        id: 'class-1',
++        managerId: 'other-manager',
++      } as any);
++
++      await expect(
++        examsService.create('mgr-1', {
++          title: 'Unauthorized Exam',
++          durationMinutes: 45,
++          classroomId: 'class-1',
++        }),
++      ).rejects.toThrow(
++        new ForbiddenException('Bạn không quản lý lớp học này'),
++      );
++      expect(mockExamsRepo.create).not.toHaveBeenCalled();
++    });
++
++    it('allows manager who owns classroom to create class exam', async () => {
++      mockExamsRepo.findClassroomById!.mockResolvedValue({
++        id: 'class-1',
++        managerId: 'mgr-1',
++      } as any);
++      mockExamsRepo.create!.mockResolvedValue({
++        id: 'exam-new',
++        title: 'Math Test',
++        classroomId: 'class-1',
++      } as any);
++
++      const result = await examsService.create('mgr-1', {
++        title: 'Math Test',
++        durationMinutes: 45,
++        classroomId: 'class-1',
++      });
++
++      expect(mockExamsRepo.create).toHaveBeenCalledWith(
++        expect.objectContaining({
++          title: 'Math Test',
++          classroom: { connect: { id: 'class-1' } },
++        }),
++      );
++      expect(result.id).toBe('exam-new');
++    });
++
++    it('blocks non-member student from viewing class exam detail (403 Forbidden)', async () => {
++      mockExamsRepo.findById!.mockResolvedValue({
++        id: 'exam-class-1',
++        title: 'Class Exam',
++        managerId: 'mgr-1',
++        status: ExamStatus.PUBLISHED,
++        classroomId: 'class-1',
++        questions: [],
++      } as any);
++      mockExamsRepo.isClassroomMember!.mockResolvedValue(false);
++
++      await expect(
++        examsService.findOne('exam-class-1', 'non-member-student', Role.STUDENT),
++      ).rejects.toThrow(
++        new ForbiddenException('Đề thi này chỉ dành cho học sinh trong lớp'),
++      );
++    });
++
++    it('allows member student to view class exam detail and strips correct options', async () => {
++      mockExamsRepo.findById!.mockResolvedValue({
++        id: 'exam-class-1',
++        title: 'Class Exam',
++        managerId: 'mgr-1',
++        status: ExamStatus.PUBLISHED,
++        classroomId: 'class-1',
++        questions: [
++          {
++            id: 'q1',
++            content: '1 + 1 = ?',
++            position: 1,
++            options: [
++              { id: 'opt1', content: '2', position: 0, isCorrect: true },
++              { id: 'opt2', content: '3', position: 1, isCorrect: false },
++            ],
++          },
++        ],
++      } as any);
++      mockExamsRepo.isClassroomMember!.mockResolvedValue(true);
++
++      const exam = await examsService.findOne('exam-class-1', 'member-student', Role.STUDENT);
++
++      expect(exam.id).toBe('exam-class-1');
++      expect((exam.questions[0].options[0] as any).isCorrect).toBeUndefined();
++    });
++  });
++
++  describe('AttemptsService Class Exam Scope Isolation', () => {
++    let attemptsService: AttemptsService;
++    let mockAttemptsRepo: jest.Mocked<Partial<AttemptsRepository>>;
++
++    beforeEach(() => {
++      mockAttemptsRepo = {
++        findExamForStart: jest.fn(),
++        isClassroomMember: jest.fn(),
++        isUserAdmin: jest.fn(),
++        findInProgress: jest.fn(),
++        countSubmitted: jest.fn(),
++        createOrResume: jest.fn(),
++        listQuestions: jest.fn().mockResolvedValue([]),
++        listAnswers: jest.fn().mockResolvedValue([]),
++      };
++      attemptsService = new AttemptsService(mockAttemptsRepo as any);
++    });
++
++    it('blocks non-member student from attempting class exam (403 Forbidden)', async () => {
++      mockAttemptsRepo.findExamForStart!.mockResolvedValue({
++        id: 'exam-class-1',
++        title: 'Class Exam',
++        status: ExamStatus.PUBLISHED,
++        durationMinutes: 60,
++        opensAt: null,
++        closesAt: null,
++        maxAttempts: 1,
++        managerId: 'mgr-1',
++        classroomId: 'class-1',
++        _count: { questions: 10 },
++      } as any);
++      mockAttemptsRepo.isClassroomMember!.mockResolvedValue(false);
++      mockAttemptsRepo.isUserAdmin!.mockResolvedValue(false);
++
++      await expect(
++        attemptsService.start('non-member-student', 'exam-class-1'),
++      ).rejects.toThrow(
++        new ForbiddenException('Đề thi này chỉ dành cho học sinh trong lớp'),
++      );
++    });
++
++    it('allows member student to attempt class exam', async () => {
++      mockAttemptsRepo.findExamForStart!.mockResolvedValue({
++        id: 'exam-class-1',
++        title: 'Class Exam',
++        instructions: null,
++        status: ExamStatus.PUBLISHED,
++        durationMinutes: 60,
++        opensAt: null,
++        closesAt: null,
++        maxAttempts: 1,
++        managerId: 'mgr-1',
++        classroomId: 'class-1',
++        _count: { questions: 10 },
++      } as any);
++      mockAttemptsRepo.isClassroomMember!.mockResolvedValue(true);
++      mockAttemptsRepo.findInProgress!.mockResolvedValue(null);
++      mockAttemptsRepo.countSubmitted!.mockResolvedValue(0);
++      mockAttemptsRepo.createOrResume!.mockResolvedValue({
++        attempt: {
++          id: 'attempt-1',
++          userId: 'member-student',
++          examId: 'exam-class-1',
++          totalQuestions: 10,
++          deadlineAt: new Date(Date.now() + 3600_000),
++          startedAt: new Date(),
++        },
++        resumed: false,
++      } as any);
++
++      const session = await attemptsService.start('member-student', 'exam-class-1');
++      expect(session.resumed).toBe(false);
++      expect(session.attempt.id).toBe('attempt-1');
++    });
++  });
++
++  describe('ClassroomsController Security & Endpoints', () => {
++    let controller: ClassroomsController;
++    let mockClassroomsService: jest.Mocked<Partial<ClassroomsService>>;
++    let mockExamsService: jest.Mocked<Partial<ExamsService>>;
++
++    beforeEach(() => {
++      mockClassroomsService = {
++        create: jest.fn(),
++        findManaged: jest.fn(),
++        findJoined: jest.fn(),
++        join: jest.fn(),
++        findById: jest.fn(),
++        assertAccess: jest.fn(),
++        findMembers: jest.fn(),
++        removeMember: jest.fn(),
++        deleteClassroom: jest.fn(),
++      };
++      mockExamsService = {
++        findByClassroom: jest.fn(),
++      };
++      controller = new ClassroomsController(
++        mockClassroomsService as any,
++        mockExamsService as any,
++      );
++    });
++
++    it('strips password when student calls GET /classrooms/:id', async () => {
++      mockClassroomsService.assertAccess!.mockResolvedValue({
++        id: 'class-1',
++        name: 'Lop 10A1',
++        code: 'ABC234',
++        password: 'secret_password_123',
++        managerId: 'mgr-1',
++      } as any);
++
++      const req = {
++        user: { id: 'student-1', role: Role.STUDENT },
++      } as any;
++
++      const result = await controller.findOne('class-1', req);
++
++      expect(mockClassroomsService.assertAccess).toHaveBeenCalledWith(
++        'class-1',
++        'student-1',
++        Role.STUDENT,
++      );
++      expect(result.password).toBeUndefined();
++      expect(result.name).toBe('Lop 10A1');
++    });
++
++    it('retains password when manager calls GET /classrooms/:id', async () => {
++      mockClassroomsService.assertAccess!.mockResolvedValue({
++        id: 'class-1',
++        name: 'Lop 10A1',
++        code: 'ABC234',
++        password: 'secret_password_123',
++        managerId: 'mgr-1',
++      } as any);
++
++      const req = {
++        user: { id: 'mgr-1', role: Role.EXAM_MANAGER },
++      } as any;
++
++      const result = await controller.findOne('class-1', req);
++
++      expect(result.password).toBe('secret_password_123');
++    });
++
++    it('blocks non-member when accessing classroom detail', async () => {
++      mockClassroomsService.assertAccess!.mockRejectedValue(
++        new ForbiddenException('Bạn không có quyền truy cập lớp học này'),
++      );
++
++      const req = {
++        user: { id: 'stranger-user', role: Role.STUDENT },
++      } as any;
++
++      await expect(controller.findOne('class-1', req)).rejects.toThrow(
++        ForbiddenException,
++      );
++    });
++
++    it('delegates findExams to examsService.findByClassroom after access assertion', async () => {
++      mockClassroomsService.assertAccess!.mockResolvedValue({
++        id: 'class-1',
++        managerId: 'mgr-1',
++      } as any);
++      mockExamsService.findByClassroom!.mockResolvedValue([
++        { id: 'exam-1', title: 'Math 1' },
++      ] as any);
++
++      const req = {
++        user: { id: 'student-member', role: Role.STUDENT },
++      } as any;
++
++      const exams = await controller.findExams('class-1', req);
++
++      expect(mockClassroomsService.assertAccess).toHaveBeenCalledWith(
++        'class-1',
++        'student-member',
++        Role.STUDENT,
++      );
++      expect(mockExamsService.findByClassroom).toHaveBeenCalledWith(
++        'class-1',
++        Role.STUDENT,
++      );
++      expect(exams).toEqual([{ id: 'exam-1', title: 'Math 1' }]);
++    });
++
++    it('delegates removeMember to classroomsService.removeMember', async () => {
++      mockClassroomsService.removeMember!.mockResolvedValue({ count: 1 } as any);
++
++      const req = {
++        user: { id: 'mgr-1', role: Role.EXAM_MANAGER },
++      } as any;
++
++      const result = await controller.removeMember('class-1', 'student-2', req);
++
++      expect(mockClassroomsService.removeMember).toHaveBeenCalledWith(
++        'class-1',
++        'student-2',
++        'mgr-1',
++        Role.EXAM_MANAGER,
++      );
++      expect(result).toEqual({ count: 1 });
++    });
++
++    it('delegates deleteClassroom to classroomsService.deleteClassroom', async () => {
++      mockClassroomsService.deleteClassroom!.mockResolvedValue({ id: 'class-1' } as any);
++
++      const req = {
++        user: { id: 'mgr-1', role: Role.EXAM_MANAGER },
++      } as any;
++
++      const result = await controller.deleteClassroom('class-1', req);
++
++      expect(mockClassroomsService.deleteClassroom).toHaveBeenCalledWith(
++        'class-1',
++        'mgr-1',
++        Role.EXAM_MANAGER,
++      );
++      expect(result).toEqual({ id: 'class-1' });
++    });
++  });
++});
+diff --git a/src/classrooms/classrooms.controller.ts b/src/classrooms/classrooms.controller.ts
+new file mode 100644
+index 0000000..367b110
+--- /dev/null
++++ b/src/classrooms/classrooms.controller.ts
+@@ -0,0 +1,189 @@
++import {
++  Body,
++  Controller,
++  Delete,
++  Get,
++  HttpCode,
++  HttpStatus,
++  Param,
++  Post,
++  Req,
++  UseGuards,
++} from '@nestjs/common';
++import {
++  ApiBearerAuth,
++  ApiConflictResponse,
++  ApiCreatedResponse,
++  ApiForbiddenResponse,
++  ApiNotFoundResponse,
++  ApiOkResponse,
++  ApiOperation,
++  ApiTags,
++  ApiUnauthorizedResponse,
++} from '@nestjs/swagger';
++import { Role } from '@prisma/client';
++import { JwtAuthGuard } from '../auth/jwt-auth.guard';
++import type { AuthenticatedRequest } from '../auth/jwt-auth.guard';
++import { RolesGuard } from '../auth/roles.guard';
++import { Roles } from '../auth/roles.decorator';
++import { ClassroomsService } from './classrooms.service';
++import { CreateClassroomDto } from './dto/create-classroom.dto';
++import { JoinClassroomDto } from './dto/join-classroom.dto';
++import { ExamsService } from '../exams/exams.service';
++
++@ApiTags('Classrooms')
++@ApiBearerAuth()
++@ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai token xác thực' })
++@UseGuards(JwtAuthGuard, RolesGuard)
++@Controller('classrooms')
++export class ClassroomsController {
++  constructor(
++    private readonly classroomsService: ClassroomsService,
++    private readonly examsService: ExamsService,
++  ) {}
++
++  @Post()
++  @Roles(Role.EXAM_MANAGER, Role.ADMIN)
++  @HttpCode(HttpStatus.CREATED)
++  @ApiOperation({ summary: '[EXAM_MANAGER/ADMIN] Tạo lớp học mới' })
++  @ApiCreatedResponse({ description: 'Lớp học đã được tạo thành công' })
++  @ApiForbiddenResponse({ description: 'Không đủ quyền hạn' })
++  create(
++    @Req() req: AuthenticatedRequest,
++    @Body() dto: CreateClassroomDto,
++  ) {
++    return this.classroomsService.create(req.user.id, dto);
++  }
++
++  @Get('managed')
++  @Roles(Role.EXAM_MANAGER, Role.ADMIN)
++  @ApiOperation({
++    summary: '[EXAM_MANAGER/ADMIN] Danh sách lớp học do giáo viên quản lý',
++  })
++  @ApiOkResponse({ description: 'Danh sách các lớp học quản lý' })
++  @ApiForbiddenResponse({ description: 'Không đủ quyền hạn' })
++  findManaged(@Req() req: AuthenticatedRequest) {
++    return this.classroomsService.findManaged(req.user.id);
++  }
++
++  @Get('joined')
++  @Roles(Role.STUDENT, Role.EXAM_MANAGER, Role.ADMIN)
++  @ApiOperation({ summary: 'Danh sách lớp học đã tham gia' })
++  @ApiOkResponse({ description: 'Danh sách các lớp học người dùng đã tham gia' })
++  findJoined(@Req() req: AuthenticatedRequest) {
++    return this.classroomsService.findJoined(req.user.id);
++  }
++
++  @Post('join')
++  @Roles(Role.STUDENT, Role.EXAM_MANAGER, Role.ADMIN)
++  @HttpCode(HttpStatus.OK)
++  @ApiOperation({ summary: 'Tham gia lớp học bằng mã code và mật khẩu' })
++  @ApiOkResponse({ description: 'Tham gia lớp học thành công' })
++  @ApiNotFoundResponse({ description: 'Mã lớp không tồn tại' })
++  @ApiConflictResponse({ description: 'Đã tham gia lớp học từ trước' })
++  join(@Req() req: AuthenticatedRequest, @Body() dto: JoinClassroomDto) {
++    return this.classroomsService.join(req.user.id, dto);
++  }
++
++  @Get(':id')
++  @Roles(Role.STUDENT, Role.EXAM_MANAGER, Role.ADMIN)
++  @ApiOperation({ summary: 'Xem chi tiết lớp học' })
++  @ApiOkResponse({ description: 'Thông tin chi tiết lớp học' })
++  @ApiNotFoundResponse({ description: 'Lớp học không tồn tại' })
++  @ApiForbiddenResponse({
++    description: 'Chỉ giáo viên quản lý hoặc thành viên mới có quyền xem',
++  })
++  async findOne(
++    @Param('id') id: string,
++    @Req() req: AuthenticatedRequest,
++  ) {
++    const classroom = await this.classroomsService.assertAccess(
++      id,
++      req.user.id,
++      req.user.role as Role,
++    );
++
++    const result = { ...classroom };
++    if (req.user.role === Role.STUDENT) {
++      delete (result as any).password;
++    }
++    return result;
++  }
++
++  @Get(':id/members')
++  @Roles(Role.STUDENT, Role.EXAM_MANAGER, Role.ADMIN)
++  @ApiOperation({ summary: 'Danh sách thành viên của lớp học' })
++  @ApiOkResponse({ description: 'Danh sách thành viên lớp học' })
++  @ApiNotFoundResponse({ description: 'Lớp học không tồn tại' })
++  @ApiForbiddenResponse({ description: 'Không có quyền truy cập' })
++  async findMembers(
++    @Param('id') id: string,
++    @Req() req: AuthenticatedRequest,
++  ) {
++    await this.classroomsService.assertAccess(
++      id,
++      req.user.id,
++      req.user.role as Role,
++    );
++    return this.classroomsService.findMembers(id);
++  }
++
++  @Delete(':id/members/:userId')
++  @Roles(Role.EXAM_MANAGER, Role.ADMIN)
++  @ApiOperation({
++    summary: '[EXAM_MANAGER/ADMIN] Xóa học sinh ra khỏi lớp học',
++  })
++  @ApiOkResponse({ description: 'Đã xóa học sinh khỏi lớp học' })
++  @ApiNotFoundResponse({ description: 'Lớp học không tồn tại' })
++  @ApiForbiddenResponse({ description: 'Bạn không quản lý lớp học này' })
++  async removeMember(
++    @Param('id') id: string,
++    @Param('userId') memberUserId: string,
++    @Req() req: AuthenticatedRequest,
++  ) {
++    return this.classroomsService.removeMember(
++      id,
++      memberUserId,
++      req.user.id,
++      req.user.role as Role,
++    );
++  }
++
++  @Delete(':id')
++  @Roles(Role.EXAM_MANAGER, Role.ADMIN)
++  @ApiOperation({ summary: '[EXAM_MANAGER/ADMIN] Xóa lớp học' })
++  @ApiOkResponse({ description: 'Xóa lớp học thành công' })
++  @ApiNotFoundResponse({ description: 'Lớp học không tồn tại' })
++  @ApiForbiddenResponse({ description: 'Bạn không quản lý lớp học này' })
++  @ApiConflictResponse({
++    description: 'Không thể xóa lớp đã có đề thi hoặc bài làm',
++  })
++  async deleteClassroom(
++    @Param('id') id: string,
++    @Req() req: AuthenticatedRequest,
++  ) {
++    return this.classroomsService.deleteClassroom(
++      id,
++      req.user.id,
++      req.user.role as Role,
++    );
++  }
++
++  @Get(':id/exams')
++  @Roles(Role.STUDENT, Role.EXAM_MANAGER, Role.ADMIN)
++  @ApiOperation({ summary: 'Danh sách đề thi của lớp học' })
++  @ApiOkResponse({ description: 'Danh sách đề thi của lớp học' })
++  @ApiNotFoundResponse({ description: 'Lớp học không tồn tại' })
++  @ApiForbiddenResponse({ description: 'Không có quyền truy cập' })
++  async findExams(
++    @Param('id') id: string,
++    @Req() req: AuthenticatedRequest,
++  ) {
++    await this.classroomsService.assertAccess(
++      id,
++      req.user.id,
++      req.user.role as Role,
++    );
++    return this.examsService.findByClassroom(id, req.user.role as Role);
++  }
++}
+diff --git a/src/classrooms/classrooms.module.ts b/src/classrooms/classrooms.module.ts
+new file mode 100644
+index 0000000..d73536f
+--- /dev/null
++++ b/src/classrooms/classrooms.module.ts
+@@ -0,0 +1,15 @@
++import { Module } from '@nestjs/common';
++import { PrismaModule } from '../database/prisma.module';
++import { AuthSecurityModule } from '../auth/auth-security.module';
++import { ExamsModule } from '../exams/exams.module';
++import { ClassroomsController } from './classrooms.controller';
++import { ClassroomsService } from './classrooms.service';
++import { ClassroomsRepository } from './classrooms.repository';
++
++@Module({
++  imports: [PrismaModule, AuthSecurityModule, ExamsModule],
++  controllers: [ClassroomsController],
++  providers: [ClassroomsService, ClassroomsRepository],
++  exports: [ClassroomsService, ClassroomsRepository],
++})
++export class ClassroomsModule {}
+diff --git a/src/classrooms/classrooms.service.ts b/src/classrooms/classrooms.service.ts
+index 55e4bf2..b1fa2ef 100644
+--- a/src/classrooms/classrooms.service.ts
++++ b/src/classrooms/classrooms.service.ts
+@@ -5,6 +5,7 @@ import {
+   Injectable,
+   NotFoundException,
+ } from '@nestjs/common';
++import { Role } from '@prisma/client';
+ import { ClassroomsRepository } from './classrooms.repository';
+ import { CreateClassroomDto } from './dto/create-classroom.dto';
+ import { JoinClassroomDto } from './dto/join-classroom.dto';
+@@ -99,6 +100,25 @@ export class ClassroomsService {
+     return classroom;
+   }
+ 
++  async assertAccess(classroomId: string, userId: string, role: Role) {
++    const classroom = await this.findById(classroomId);
++
++    if (role === Role.ADMIN || classroom.managerId === userId) {
++      return classroom;
++    }
++
++    const member = await this.classroomsRepository.findMember(
++      classroomId,
++      userId,
++    );
++
++    if (!member) {
++      throw new ForbiddenException('Bạn không có quyền truy cập lớp học này');
++    }
++
++    return classroom;
++  }
++
+   async findMembers(classroomId: string) {
+     await this.findById(classroomId);
+     return this.classroomsRepository.findMembers(classroomId);
+@@ -108,20 +128,21 @@ export class ClassroomsService {
+     classroomId: string,
+     memberUserId: string,
+     managerId: string,
++    role?: Role,
+   ) {
+     const classroom = await this.findById(classroomId);
+ 
+-    if (classroom.managerId !== managerId) {
++    if (role !== Role.ADMIN && classroom.managerId !== managerId) {
+       throw new ForbiddenException('Bạn không có quyền quản lý lớp học này');
+     }
+ 
+     return this.classroomsRepository.removeMember(classroomId, memberUserId);
+   }
+ 
+-  async deleteClassroom(classroomId: string, managerId: string) {
++  async deleteClassroom(classroomId: string, managerId: string, role?: Role) {
+     const classroom = await this.findById(classroomId);
+ 
+-    if (classroom.managerId !== managerId) {
++    if (role !== Role.ADMIN && classroom.managerId !== managerId) {
+       throw new ForbiddenException('Bạn không có quyền quản lý lớp học này');
+     }
+ 
+diff --git a/src/exams/dto/create-exam.dto.ts b/src/exams/dto/create-exam.dto.ts
+index 05db2d5..31fbe71 100644
+--- a/src/exams/dto/create-exam.dto.ts
++++ b/src/exams/dto/create-exam.dto.ts
+@@ -33,4 +33,29 @@ export class CreateExamDto {
+   @IsInt()
+   @Min(1)
+   durationMinutes: number;
++
++  @ApiPropertyOptional({ example: '2026-10-20T08:00:00.000Z' })
++  @IsOptional()
++  opensAt?: string | null;
++
++  @ApiPropertyOptional({ example: '2026-10-20T17:00:00.000Z' })
++  @IsOptional()
++  closesAt?: string | null;
++
++  @ApiPropertyOptional({ example: 1, default: 1 })
++  @IsOptional()
++  @IsInt()
++  @Min(1)
++  maxAttempts?: number;
++
++  @ApiPropertyOptional({
++    example: '507f1f77bcf86cd799439011',
++    description: 'Classroom ID if the exam belongs to a class',
++  })
++  @Transform(({ value }) =>
++    typeof value === 'string' && value.trim() ? value.trim() : value === '' ? undefined : value,
++  )
++  @IsOptional()
++  @IsString()
++  classroomId?: string;
+ }
+diff --git a/src/exams/dto/reopen-exam.dto.ts b/src/exams/dto/reopen-exam.dto.ts
+new file mode 100644
+index 0000000..5ddeea3
+--- /dev/null
++++ b/src/exams/dto/reopen-exam.dto.ts
+@@ -0,0 +1,11 @@
++import { ApiPropertyOptional } from '@nestjs/swagger';
++import { IsOptional } from 'class-validator';
++
++export class ReopenExamDto {
++  @ApiPropertyOptional({
++    example: '2026-10-21T17:00:00.000Z',
++    description: 'Optional new closing time when reopening',
++  })
++  @IsOptional()
++  closesAt?: string | null;
++}
+diff --git a/src/exams/exam-schedule-reopen.spec.ts b/src/exams/exam-schedule-reopen.spec.ts
+new file mode 100644
+index 0000000..4c35daa
+--- /dev/null
++++ b/src/exams/exam-schedule-reopen.spec.ts
+@@ -0,0 +1,150 @@
++import { BadRequestException, ConflictException } from '@nestjs/common';
++import { ExamStatus, Role } from '@prisma/client';
++import { ExamsService } from './exams.service';
++import { AttemptsService } from '../attempts/attempts.service';
++
++describe('Exam Scheduling, Reopening & Hard Cutoff', () => {
++  describe('ExamsService.reopen', () => {
++    it('throws BadRequestException if exam is not CLOSED', async () => {
++      const mockRepo = {
++        findById: jest.fn().mockResolvedValue({
++          id: 'exam-1',
++          managerId: 'mgr-1',
++          status: ExamStatus.PUBLISHED,
++        }),
++        reopen: jest.fn(),
++      } as any;
++      const service = new ExamsService(mockRepo, {} as any);
++
++      await expect(
++        service.reopen('exam-1', 'mgr-1', Role.EXAM_MANAGER),
++      ).rejects.toThrow(BadRequestException);
++      expect(mockRepo.reopen).not.toHaveBeenCalled();
++    });
++
++    it('successfully calls repo.reopen when exam is CLOSED', async () => {
++      const mockRepo = {
++        findById: jest.fn().mockResolvedValue({
++          id: 'exam-1',
++          managerId: 'mgr-1',
++          status: ExamStatus.CLOSED,
++        }),
++        reopen: jest.fn().mockResolvedValue({
++          id: 'exam-1',
++          status: ExamStatus.PUBLISHED,
++        }),
++      } as any;
++      const service = new ExamsService(mockRepo, {} as any);
++
++      const result = await service.reopen('exam-1', 'mgr-1', Role.EXAM_MANAGER, {
++        closesAt: '2026-10-25T17:00:00.000Z',
++      });
++      expect(result.status).toBe(ExamStatus.PUBLISHED);
++      expect(mockRepo.reopen).toHaveBeenCalledWith(
++        'exam-1',
++        new Date('2026-10-25T17:00:00.000Z'),
++      );
++    });
++  });
++
++  describe('AttemptsService.start - Scheduling & Quota checks', () => {
++    const defaultExam = {
++      id: 'exam-1',
++      title: 'Exam 1',
++      instructions: null,
++      durationMinutes: 60,
++      status: ExamStatus.PUBLISHED,
++      opensAt: null as Date | null,
++      closesAt: null as Date | null,
++      maxAttempts: 1,
++      _count: { questions: 5 },
++    };
++
++    it('rejects attempt when exam opensAt is in the future', async () => {
++      const futureOpen = new Date(Date.now() + 3600_000);
++      const mockRepo = {
++        findExamForStart: jest.fn().mockResolvedValue({
++          ...defaultExam,
++          opensAt: futureOpen,
++        }),
++        findInProgress: jest.fn().mockResolvedValue(null),
++        countSubmitted: jest.fn().mockResolvedValue(0),
++      } as any;
++      const service = new AttemptsService(mockRepo);
++
++      await expect(service.start('user-1', 'exam-1')).rejects.toThrow(
++        ConflictException,
++      );
++    });
++
++    it('rejects attempt when exam closesAt has already passed', async () => {
++      const pastClose = new Date(Date.now() - 60_000);
++      const mockRepo = {
++        findExamForStart: jest.fn().mockResolvedValue({
++          ...defaultExam,
++          closesAt: pastClose,
++        }),
++        findInProgress: jest.fn().mockResolvedValue(null),
++        countSubmitted: jest.fn().mockResolvedValue(0),
++      } as any;
++      const service = new AttemptsService(mockRepo);
++
++      await expect(service.start('user-1', 'exam-1')).rejects.toThrow(
++        ConflictException,
++      );
++    });
++
++    it('rejects attempt when user has already reached maxAttempts', async () => {
++      const mockRepo = {
++        findExamForStart: jest.fn().mockResolvedValue({
++          ...defaultExam,
++          maxAttempts: 2,
++        }),
++        findInProgress: jest.fn().mockResolvedValue(null),
++        countSubmitted: jest.fn().mockResolvedValue(2),
++      } as any;
++      const service = new AttemptsService(mockRepo);
++
++      await expect(service.start('user-1', 'exam-1')).rejects.toThrow(
++        ConflictException,
++      );
++      expect(mockRepo.countSubmitted).toHaveBeenCalledWith('user-1', 'exam-1');
++    });
++
++    it('applies Hard Cutoff: bounds deadlineAt to closesAt if closesAt is sooner than full duration', async () => {
++      // Closes in 10 minutes, but duration is 60 minutes
++      const closesAt = new Date(Date.now() + 10 * 60_000);
++      let capturedDeadline: Date | undefined;
++
++      const mockRepo = {
++        findExamForStart: jest.fn().mockResolvedValue({
++          ...defaultExam,
++          durationMinutes: 60,
++          closesAt,
++        }),
++        findInProgress: jest.fn().mockResolvedValue(null),
++        countSubmitted: jest.fn().mockResolvedValue(0),
++        createOrResume: jest.fn().mockImplementation((args) => {
++          capturedDeadline = args.deadlineAt;
++          return {
++            resumed: false,
++            attempt: {
++              id: 'attempt-1',
++              deadlineAt: args.deadlineAt,
++            },
++          };
++        }),
++      } as any;
++
++      const service = new AttemptsService(mockRepo);
++      // Stub buildSession to avoid needing full questions
++      (service as any).buildSession = jest.fn().mockResolvedValue({
++        attemptId: 'attempt-1',
++        deadlineAt: closesAt.toISOString(),
++      });
++
++      await service.start('user-1', 'exam-1');
++      expect(capturedDeadline).toEqual(closesAt);
++    });
++  });
++});
+diff --git a/src/exams/exams.controller.ts b/src/exams/exams.controller.ts
+index 242192d..a945b61 100644
+--- a/src/exams/exams.controller.ts
++++ b/src/exams/exams.controller.ts
+@@ -32,6 +32,7 @@ import { Roles } from '../auth/roles.decorator';
+ import { ExamsService } from './exams.service';
+ import { CreateExamDto } from './dto/create-exam.dto';
+ import { UpdateExamDto } from './dto/update-exam.dto';
++import { ReopenExamDto } from './dto/reopen-exam.dto';
+ import { ExamResultsQueryDto } from './dto/exam-results-query.dto';
+ import { ParseObjectIdPipe } from '../attempts/parse-object-id.pipe';
+ 
+@@ -50,7 +51,7 @@ export class ExamsController {
+   @ApiUnauthorizedResponse({ description: 'Missing or invalid token' })
+   @ApiForbiddenResponse({ description: 'Insufficient role' })
+   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateExamDto) {
+-    return this.examsService.create(req.user.id, dto);
++    return this.examsService.create(req.user.id, dto, req.user.role as Role);
+   }
+ 
+   @Get()
+@@ -165,4 +166,32 @@ export class ExamsController {
+   ) {
+     return this.examsService.close(id, req.user.id, req.user.role as Role);
+   }
++
++  @Put(':id/reopen')
++  @Roles(Role.EXAM_MANAGER, Role.ADMIN)
++  @ApiOperation({ summary: '[EXAM_MANAGER/ADMIN] Reopen a CLOSED exam' })
++  @ApiOkResponse({ description: 'Exam is now PUBLISHED again' })
++  @ApiNotFoundResponse({ description: 'Exam not found' })
++  @ApiForbiddenResponse({ description: 'Not the owner or not CLOSED' })
++  reopen(
++    @Param('id', ParseObjectIdPipe) id: string,
++    @Req() req: AuthenticatedRequest,
++    @Body() dto?: ReopenExamDto,
++  ) {
++    return this.examsService.reopen(id, req.user.id, req.user.role as Role, dto);
++  }
++
++  @Post(':id/reopen')
++  @Roles(Role.EXAM_MANAGER, Role.ADMIN)
++  @ApiOperation({ summary: '[EXAM_MANAGER/ADMIN] Reopen a CLOSED exam (POST alias)' })
++  @ApiOkResponse({ description: 'Exam is now PUBLISHED again' })
++  @ApiNotFoundResponse({ description: 'Exam not found' })
++  @ApiForbiddenResponse({ description: 'Not the owner or not CLOSED' })
++  reopenPost(
++    @Param('id', ParseObjectIdPipe) id: string,
++    @Req() req: AuthenticatedRequest,
++    @Body() dto?: ReopenExamDto,
++  ) {
++    return this.examsService.reopen(id, req.user.id, req.user.role as Role, dto);
++  }
+ }
+diff --git a/src/exams/exams.repository.ts b/src/exams/exams.repository.ts
+index 04ad0e0..c08cdc1 100644
+--- a/src/exams/exams.repository.ts
++++ b/src/exams/exams.repository.ts
+@@ -4,7 +4,7 @@ import {
+   Injectable,
+   NotFoundException,
+ } from '@nestjs/common';
+-import { AttemptStatus, ExamStatus, Prisma } from '@prisma/client';
++import { AttemptStatus, ExamStatus, Prisma, Role } from '@prisma/client';
+ import { PrismaService } from '../database/prisma.service';
+ import { ExamResultsQueryDto } from './dto/exam-results-query.dto';
+ import { lockExamStatus, retryExamWrite } from './exam-write-conflict';
+@@ -29,8 +29,16 @@ export class ExamsRepository {
+     });
+   }
+ 
+-  findAll() {
++  findAll(role?: Role) {
++    const where: Prisma.ExamWhereInput = {};
++    if (role === Role.STUDENT) {
++      where.status = ExamStatus.PUBLISHED;
++      where.OR = [{ classroomId: null }, { classroomId: { isSet: false } }];
++    } else if (role === Role.EXAM_MANAGER) {
++      where.OR = [{ classroomId: null }, { classroomId: { isSet: false } }];
++    }
+     return this.prisma.exam.findMany({
++      where,
+       orderBy: { createdAt: 'desc' },
+       include: { _count: { select: { questions: true, attempts: true } } },
+     });
+@@ -38,7 +46,10 @@ export class ExamsRepository {
+ 
+   findManyByManager(managerId: string) {
+     return this.prisma.exam.findMany({
+-      where: { managerId },
++      where: {
++        managerId,
++        OR: [{ classroomId: null }, { classroomId: { isSet: false } }],
++      },
+       orderBy: { createdAt: 'desc' },
+       include: { _count: { select: { questions: true, attempts: true } } },
+     });
+@@ -46,21 +57,82 @@ export class ExamsRepository {
+ 
+   findManyPublished() {
+     return this.prisma.exam.findMany({
+-      where: { status: ExamStatus.PUBLISHED },
++      where: {
++        status: ExamStatus.PUBLISHED,
++        OR: [{ classroomId: null }, { classroomId: { isSet: false } }],
++      },
+       orderBy: { publishedAt: 'desc' },
+       include: { _count: { select: { questions: true } } },
+     });
+   }
+ 
+-  update(id: string, data: Prisma.ExamUpdateInput) {
++  findByClassroom(classroomId: string, userRole?: Role) {
++    const where: Prisma.ExamWhereInput = {
++      classroomId,
++      ...(userRole === Role.STUDENT ? { status: ExamStatus.PUBLISHED } : {}),
++    };
++    return this.prisma.exam.findMany({
++      where,
++      orderBy: { createdAt: 'desc' },
++      include: {
++        _count: {
++          select: {
++            questions: true,
++            attempts: true,
++          },
++        },
++      },
++    });
++  }
++
++  async findClassroomById(id: string) {
++    return this.prisma.classroom.findUnique({
++      where: { id },
++    });
++  }
++
++  async isClassroomMember(classroomId: string, userId: string): Promise<boolean> {
++    const member = await this.prisma.classroomMember.findUnique({
++      where: {
++        classroomId_userId: {
++          classroomId,
++          userId,
++        },
++      },
++    });
++    return !!member;
++  }
++
++  update(id: string, data: Prisma.ExamUpdateInput, expectedStatus?: ExamStatus) {
+     return retryExamWrite(() =>
+       this.prisma.$transaction(async (tx) => {
+-        await lockExamStatus(tx, id, ExamStatus.DRAFT);
++        if (expectedStatus) {
++          await lockExamStatus(tx, id, expectedStatus);
++        }
+         return tx.exam.update({ where: { id }, data });
+       }),
+     );
+   }
+ 
++  reopen(id: string, closesAt?: Date | null) {
++    return retryExamWrite(() =>
++      this.prisma.$transaction(async (tx) => {
++        await lockExamStatus(tx, id, ExamStatus.CLOSED);
++        const data: Prisma.ExamUpdateInput = {
++          status: ExamStatus.PUBLISHED,
++          closedAt: null,
++        };
++        if (closesAt !== undefined) {
++          data.closesAt = closesAt;
++        }
++        return tx.exam.update({
++          where: { id },
++          data,
++        });
++      }),
++    );
++  }
++
+   delete(id: string) {
+     return retryExamWrite(() =>
+       this.prisma.$transaction(async (tx) => {
+@@ -193,8 +265,95 @@ export class ExamsRepository {
+       });
+       const count = (status: AttemptStatus) =>
+         counts.find((row) => row.status === status)?._count._all ?? 0;
++
++      const submittedForLeaderboard = await tx.attempt.findMany({
++        where: { examId, status: AttemptStatus.SUBMITTED, score: { not: null } },
++        select: {
++          id: true,
++          userId: true,
++          score: true,
++          startedAt: true,
++          submittedAt: true,
++          user: {
++            select: {
++              id: true,
++              email: true,
++              fullName: true,
++              avatar: true,
++            },
++          },
++        },
++      });
++
++      const bestByUser = new Map<
++        string,
++        {
++          userId: string;
++          fullName: string;
++          email: string;
++          avatar: string | null;
++          bestScore: number;
++          attemptId: string;
++          durationSeconds: number;
++          submittedAt: Date | null;
++        }
++      >();
++
++      for (const att of submittedForLeaderboard) {
++        const score = att.score ?? 0;
++        const durationSeconds =
++          att.submittedAt && att.startedAt
++            ? Math.max(
++                0,
++                Math.floor(
++                  (att.submittedAt.getTime() - att.startedAt.getTime()) / 1000,
++                ),
++              )
++            : 0;
++        const current = bestByUser.get(att.userId);
++        if (!current) {
++          bestByUser.set(att.userId, {
++            userId: att.userId,
++            fullName: att.user.fullName,
++            email: att.user.email,
++            avatar: att.user.avatar,
++            bestScore: score,
++            attemptId: att.id,
++            durationSeconds,
++            submittedAt: att.submittedAt,
++          });
++        } else if (
++          score > current.bestScore ||
++          (score === current.bestScore &&
++            durationSeconds < current.durationSeconds)
++        ) {
++          bestByUser.set(att.userId, {
++            userId: att.userId,
++            fullName: att.user.fullName,
++            email: att.user.email,
++            avatar: att.user.avatar,
++            bestScore: score,
++            attemptId: att.id,
++            durationSeconds,
++            submittedAt: att.submittedAt,
++          });
++        }
++      }
++
++      const leaderboard = Array.from(bestByUser.values())
++        .sort(
++          (a, b) =>
++            b.bestScore - a.bestScore ||
++            a.durationSeconds - b.durationSeconds,
++        )
++        .map((entry, index) => ({
++          rank: index + 1,
++          ...entry,
++        }));
++
+       return {
+         data,
++        leaderboard,
+         meta: {
+           page: query.page,
+           limit: query.limit,
+diff --git a/src/exams/exams.service.ts b/src/exams/exams.service.ts
+index 537b8e4..ff94f97 100644
+--- a/src/exams/exams.service.ts
++++ b/src/exams/exams.service.ts
+@@ -4,10 +4,11 @@ import {
+   Injectable,
+   NotFoundException,
+ } from '@nestjs/common';
+-import { ExamStatus, Role } from '@prisma/client';
++import { ExamStatus, Prisma, Role } from '@prisma/client';
+ import { ExamsRepository } from './exams.repository';
+ import { CreateExamDto } from './dto/create-exam.dto';
+ import { UpdateExamDto } from './dto/update-exam.dto';
++import { ReopenExamDto } from './dto/reopen-exam.dto';
+ import { ExamResultsQueryDto } from './dto/exam-results-query.dto';
+ import { AttemptsService } from '../attempts/attempts.service';
+ 
+@@ -18,6 +19,13 @@ export class ExamsService {
+     private readonly attemptsService: AttemptsService,
+   ) {}
+ 
++  async getExamById(id: string, userId?: string, role?: Role) {
++    if (userId && role) {
++      return this.findOne(id, userId, role);
++    }
++    return this.findOneOrFail(id);
++  }
++
+   async findOneOrFail(id: string) {
+     const exam = await this.examsRepository.findById(id);
+     if (!exam) throw new NotFoundException('Exam not found');
+@@ -30,13 +38,31 @@ export class ExamsService {
+       throw new ForbiddenException('You do not own this exam');
+   }
+ 
+-  async create(managerId: string, dto: CreateExamDto) {
++  async create(managerId: string, dto: CreateExamDto, role?: Role) {
++    if (dto.classroomId) {
++      const classroom = await this.examsRepository.findClassroomById(
++        dto.classroomId,
++      );
++      if (!classroom) {
++        throw new NotFoundException('Lớp học không tồn tại');
++      }
++      if (role !== Role.ADMIN && classroom.managerId !== managerId) {
++        throw new ForbiddenException('Bạn không quản lý lớp học này');
++      }
++    }
++
+     return this.examsRepository.create({
+       title: dto.title,
+       description: dto.description,
+       instructions: dto.instructions,
+       durationMinutes: dto.durationMinutes,
++      maxAttempts: dto.maxAttempts ?? 1,
++      opensAt: dto.opensAt ? new Date(dto.opensAt) : null,
++      closesAt: dto.closesAt ? new Date(dto.closesAt) : null,
+       manager: { connect: { id: managerId } },
++      ...(dto.classroomId
++        ? { classroom: { connect: { id: dto.classroomId } } }
++        : {}),
+     });
+   }
+ 
+@@ -47,8 +73,27 @@ export class ExamsService {
+     return this.examsRepository.findManyPublished();
+   }
+ 
++  async findByClassroom(classroomId: string, userRole: Role) {
++    return this.examsRepository.findByClassroom(classroomId, userRole);
++  }
++
+   async findOne(id: string, userId: string, role: Role) {
+     const exam = await this.findOneOrFail(id);
++
++    if (exam.classroomId) {
++      const isOwner = exam.managerId === userId;
++      const isAdmin = role === Role.ADMIN;
++      const isMember = await this.examsRepository.isClassroomMember(
++        exam.classroomId,
++        userId,
++      );
++      if (!isOwner && !isAdmin && !isMember) {
++        throw new ForbiddenException(
++          'Đề thi này chỉ dành cho học sinh trong lớp',
++        );
++      }
++    }
++
+     if (role === Role.ADMIN) return exam;
+     if (role === Role.EXAM_MANAGER) {
+       this.assertOwner(exam, userId, role);
+@@ -74,9 +119,19 @@ export class ExamsService {
+   async update(id: string, managerId: string, dto: UpdateExamDto, role: Role) {
+     const exam = await this.findOneOrFail(id);
+     this.assertOwner(exam, managerId, role);
+-    if (exam.status !== ExamStatus.DRAFT)
+-      throw new BadRequestException('Only DRAFT exams can be modified');
+-    return this.examsRepository.update(id, dto);
++    const updateData: Prisma.ExamUpdateInput = {};
++    if (dto.title !== undefined) updateData.title = dto.title;
++    if (dto.description !== undefined) updateData.description = dto.description;
++    if (dto.instructions !== undefined) updateData.instructions = dto.instructions;
++    if (dto.maxAttempts !== undefined) updateData.maxAttempts = dto.maxAttempts;
++    if (dto.opensAt !== undefined) updateData.opensAt = dto.opensAt ? new Date(dto.opensAt) : null;
++    if (dto.closesAt !== undefined) updateData.closesAt = dto.closesAt ? new Date(dto.closesAt) : null;
++
++    if (exam.status === ExamStatus.DRAFT) {
++      if (dto.durationMinutes !== undefined) updateData.durationMinutes = dto.durationMinutes;
++      return this.examsRepository.update(id, updateData, ExamStatus.DRAFT);
++    }
++    return this.examsRepository.update(id, updateData, exam.status);
+   }
+ 
+   async remove(id: string, managerId: string, role: Role) {
+@@ -118,6 +173,20 @@ export class ExamsService {
+     return this.examsRepository.close(id);
+   }
+ 
++  async reopen(
++    id: string,
++    managerId: string,
++    role: Role,
++    dto?: ReopenExamDto,
++  ) {
++    const exam = await this.findOneOrFail(id);
++    this.assertOwner(exam, managerId, role);
++    if (exam.status !== ExamStatus.CLOSED)
++      throw new BadRequestException('Only CLOSED exams can be reopened');
++    const closesAt = dto?.closesAt ? new Date(dto.closesAt) : undefined;
++    return this.examsRepository.reopen(id, closesAt);
++  }
++
+   async results(
+     id: string,
+     userId: string,
+diff --git a/src/main.ts b/src/main.ts
+index 9208b68..4c04ab0 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -2,10 +2,14 @@ import { NestFactory } from '@nestjs/core';
+ import { AppModule } from './app.module';
+ import { ValidationPipe } from '@nestjs/common';
+ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
++import { json, urlencoded } from 'express';
+ 
+ async function bootstrap() {
+   const app = await NestFactory.create(AppModule);
+ 
++  app.use(json({ limit: '10mb' }));
++  app.use(urlencoded({ extended: true, limit: '10mb' }));
++
+   app.enableCors({
+     origin: 'http://localhost:5173',
+     credentials: true,
+diff --git a/src/users/dto/update-profile.dto.ts b/src/users/dto/update-profile.dto.ts
+new file mode 100644
+index 0000000..7f7fe21
+--- /dev/null
++++ b/src/users/dto/update-profile.dto.ts
+@@ -0,0 +1,42 @@
++import { Transform } from 'class-transformer';
++import {
++  IsNotEmpty,
++  IsOptional,
++  IsString,
++  MaxLength,
++} from 'class-validator';
++import { ApiPropertyOptional } from '@nestjs/swagger';
++
++export class UpdateProfileDto {
++  @ApiPropertyOptional({ example: 'Nguyen Van An', maxLength: 100 })
++  @IsOptional()
++  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
++  @IsString()
++  @IsNotEmpty()
++  @MaxLength(100)
++  fullName?: string;
++
++  @ApiPropertyOptional({ example: 'data:image/png;base64,...' })
++  @IsOptional()
++  @IsString()
++  avatar?: string | null;
++
++  @ApiPropertyOptional({ example: 'data:image/jpeg;base64,...' })
++  @IsOptional()
++  @IsString()
++  cover?: string | null;
++
++  @ApiPropertyOptional({ example: 'Đại học Bách Khoa', maxLength: 150 })
++  @IsOptional()
++  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
++  @IsString()
++  @MaxLength(150)
++  workplace?: string | null;
++
++  @ApiPropertyOptional({ example: 'TP Hồ Chí Minh', maxLength: 150 })
++  @IsOptional()
++  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
++  @IsString()
++  @MaxLength(150)
++  currentResidence?: string | null;
++}
+diff --git a/src/users/users.controller.ts b/src/users/users.controller.ts
+index bc93ca2..39d543a 100644
+--- a/src/users/users.controller.ts
++++ b/src/users/users.controller.ts
+@@ -1,11 +1,14 @@
+ import {
++  Body,
+   Controller,
+   Get,
++  Patch,
+   Req,
+   UnauthorizedException,
+   UseGuards,
+ } from '@nestjs/common';
+ import {
++  ApiBadRequestResponse,
+   ApiBearerAuth,
+   ApiOkResponse,
+   ApiOperation,
+@@ -15,6 +18,7 @@ import {
+ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+ import type { AuthenticatedRequest } from '../auth/jwt-auth.guard';
+ import { UsersService } from './users.service';
++import { UpdateProfileDto } from './dto/update-profile.dto';
+ 
+ @ApiTags('Users')
+ @ApiBearerAuth()
+@@ -35,4 +39,19 @@ export class UsersController {
+     if (!user) throw new UnauthorizedException('Account no longer exists');
+     return user;
+   }
++
++  @Patch('me')
++  @ApiOperation({ summary: 'Update profile information for the authenticated account' })
++  @ApiOkResponse({ description: 'Updated account information' })
++  @ApiBadRequestResponse({ description: 'Invalid profile data' })
++  @ApiUnauthorizedResponse({
++    description:
++      'Missing, invalid, expired or revoked token, or deleted account',
++  })
++  async updateProfile(
++    @Req() request: AuthenticatedRequest,
++    @Body() dto: UpdateProfileDto,
++  ) {
++    return this.usersService.updateProfile(request.user.id, dto);
++  }
+ }
+diff --git a/src/users/users.repository.ts b/src/users/users.repository.ts
+index 050afb9..fea90fd 100644
+--- a/src/users/users.repository.ts
++++ b/src/users/users.repository.ts
+@@ -36,6 +36,22 @@ export class UsersRepository {
+     });
+   }
+ 
++  async updateProfile(
++    id: string,
++    data: {
++      fullName?: string;
++      avatar?: string | null;
++      cover?: string | null;
++      workplace?: string | null;
++      currentResidence?: string | null;
++    },
++  ) {
++    return this.prisma.user.update({
++      where: { id },
++      data,
++    });
++  }
++
+   async findAll() {
+     return this.prisma.user.findMany({
+       orderBy: { createdAt: 'desc' },
+@@ -44,6 +60,10 @@ export class UsersRepository {
+         email: true,
+         fullName: true,
+         role: true,
++        avatar: true,
++        cover: true,
++        workplace: true,
++        currentResidence: true,
+         createdAt: true,
+         updatedAt: true,
+       },
+@@ -73,6 +93,10 @@ export class UsersRepository {
+         email: true,
+         fullName: true,
+         role: true,
++        avatar: true,
++        cover: true,
++        workplace: true,
++        currentResidence: true,
+         updatedAt: true,
+       },
+     });
+diff --git a/src/users/users.service.ts b/src/users/users.service.ts
+index 55108d2..eb68992 100644
+--- a/src/users/users.service.ts
++++ b/src/users/users.service.ts
+@@ -37,6 +37,26 @@ export class UsersService {
+     return this.usersRepository.updateRole(id, role);
+   }
+ 
++  async updateProfile(
++    id: string,
++    dto: {
++      fullName?: string;
++      avatar?: string | null;
++      cover?: string | null;
++      workplace?: string | null;
++      currentResidence?: string | null;
++    },
++  ) {
++    await this.findPublicUserOrFail(id);
++    const updated = await this.usersRepository.updateProfile(id, dto);
++    const {
++      passwordHash: _passwordHash,
++      authVersion: _authVersion,
++      ...publicUser
++    } = updated;
++    return publicUser;
++  }
++
+   async remove(id: string) {
+     await this.findPublicUserOrFail(id);
+     await this.usersRepository.deleteById(id);

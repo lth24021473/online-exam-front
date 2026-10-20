@@ -1,0 +1,66 @@
+<h2>Định hình luồng nghiệp vụ: Sinh viên & Giáo viên</h2>
+<p class="subtitle">Dựa trên toàn bộ API backend sẵn có của <code>online-exam-api</code>, hãy xem qua các cấu trúc giao diện và luồng thao tác dự kiến dưới đây.</p>
+
+<div class="cards">
+  <div class="card" data-choice="student-flow" onclick="toggleSelect(this)">
+    <div class="preview" style="background:#f8f9fa;padding:16px;border-radius:8px;border:2px solid #1a1a1a;">
+      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #eee;padding-bottom:8px;margin-bottom:12px;">
+        <span style="font-weight:700;font-family:'Space Grotesk',sans-serif;">⏱️ 00:44:12</span>
+        <span style="background:#ffcc00;padding:2px 8px;font-size:12px;font-weight:700;border:1px solid #1a1a1a;">Câu 3 / 20</span>
+      </div>
+      <div style="font-weight:600;margin-bottom:8px;">Câu hỏi: Đâu là nguyên tắc cốt lõi của Bauhaus?</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;">
+        <div style="padding:6px;border:1px solid #ccc;background:#fff;">A. Art for art's sake</div>
+        <div style="padding:6px;border:2px solid #1a1a1a;background:#fff8d6;font-weight:600;">B. Form follows function (Đã chọn)</div>
+        <div style="padding:6px;border:1px solid #ccc;background:#fff;">C. Ornament is beauty</div>
+      </div>
+    </div>
+    <div class="caption">
+      <h3>1. Luồng Sinh Viên: Làm bài & Xem đáp án</h3>
+      <p>• Thanh sidebar theo dõi 100% câu hỏi (đã làm, chưa làm, gắn cờ xem lại).<br>• Tự động lưu đáp án và nộp tự động khi hết giờ.<br>• Màn hình kết quả đối chiếu chi tiết: đáp án đã chọn vs đáp án đúng + giải thích câu hỏi.<br>• Trang Lịch sử bài làm có bộ lọc trạng thái và nút xem lại chi tiết bài cũ.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="manager-flow" onclick="toggleSelect(this)">
+    <div class="preview" style="background:#f8f9fa;padding:16px;border-radius:8px;border:2px solid #1a1a1a;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="font-weight:700;font-size:14px;">🏆 BẢNG XẾP HẠNG ĐỀ THI</span>
+        <span style="font-size:12px;background:#e63b2e;color:#fff;padding:2px 6px;font-weight:700;">LIVE</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;font-size:12px;">
+        <div style="flex:1;background:#fff;border:1px solid #1a1a1a;padding:6px;text-align:center;">
+          <div>Điểm TB</div><strong>7.8 / 10</strong>
+        </div>
+        <div style="flex:1;background:#ffcc00;border:1px solid #1a1a1a;padding:6px;text-align:center;">
+          <div>Cao nhất</div><strong>10.0</strong>
+        </div>
+      </div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse;">
+        <tr style="border-bottom:1px solid #1a1a1a;background:#eee;">
+          <th style="padding:4px;text-align:left;">Hạng</th>
+          <th style="padding:4px;text-align:left;">Học sinh</th>
+          <th style="padding:4px;text-align:right;">Điểm</th>
+        </tr>
+        <tr style="border-bottom:1px solid #ddd;">
+          <td style="padding:4px;">🥇 1</td>
+          <td style="padding:4px;">Nguyễn Văn A</td>
+          <td style="padding:4px;text-align:right;font-weight:700;color:#0055ff;">10.0</td>
+        </tr>
+        <tr>
+          <td style="padding:4px;">🥈 2</td>
+          <td style="padding:4px;">Trần Thị B</td>
+          <td style="padding:4px;text-align:right;font-weight:700;">9.5</td>
+        </tr>
+      </table>
+    </div>
+    <div class="caption">
+      <h3>2. Luồng Giáo Viên: Soạn đề & Bảng xếp hạng</h3>
+      <p>• Soạn đề trực quan: tạo câu hỏi, thêm đáp án linh hoạt, đánh dấu đáp án đúng.<br>• Phân tích phổ điểm: Trung bình, Cao nhất, Thấp nhất (từ API backend).<br>• Bảng xếp hạng (Leaderboard) vinh danh Top học sinh đạt điểm cao nhất và nộp sớm nhất.<br>• Xuất hoặc lọc kết quả theo trạng thái bài nộp.</p>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:24px;padding:16px;background:#eee9e0;border:2px solid #1a1a1a;border-radius:4px;">
+  <h4 style="margin:0 0 8px 0;font-family:'Space Grotesk',sans-serif;">💡 Bạn có muốn bổ sung thêm điều gì vào 2 luồng này không?</h4>
+  <p style="margin:0;font-size:14px;color:#333;">Ví dụ: Cho phép sinh viên xem bảng xếp hạng lớp sau khi nộp bài, hay chỉ giáo viên mới được xem?</p>
+</div>

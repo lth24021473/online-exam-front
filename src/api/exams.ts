@@ -5,6 +5,7 @@ import type { AuthRole } from './auth.api'
 export interface ExamInfo {
   id: string; title: string; description: string | null; instructions: string | null
   durationMinutes: number; totalQuestions: number | null; status: 'DRAFT' | 'PUBLISHED' | 'CLOSED'
+  opensAt?: string | null; closesAt?: string | null; maxAttempts?: number
 }
 export interface ExamCatalog { items: ExamInfo[]; meta: { page: number; limit: number; total: number; totalPages: number }; demo: boolean }
 

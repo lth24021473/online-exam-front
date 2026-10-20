@@ -45,7 +45,7 @@ async function main() {
     await prisma.$transaction(async (tx) => {
       await tx.user.create({ data: { id: fixture.managerId, email: fixture.managerEmail, passwordHash, fullName: 'Frontend test manager', role: 'EXAM_MANAGER' } });
       await tx.user.create({ data: { id: fixture.studentId, email: fixture.email, passwordHash, fullName: 'Frontend test student', role: 'STUDENT' } });
-      await tx.exam.create({ data: { id: fixture.examId, managerId: fixture.managerId, title: fixture.title, durationMinutes: 15, status: 'PUBLISHED', publishedAt: new Date(), instructions: 'Chọn một đáp án cho mỗi câu.', questions: { create: [
+      await tx.exam.create({ data: { id: fixture.examId, managerId: fixture.managerId, title: fixture.title, durationMinutes: 15, maxAttempts: 5, status: 'PUBLISHED', publishedAt: new Date(), instructions: 'Chọn một đáp án cho mỗi câu.', questions: { create: [
         { content: 'Ngôn ngữ nào chạy trong trình duyệt?', position: 1, options: { create: [{ content: 'JavaScript', position: 0, isCorrect: true }, { content: 'Python', position: 1, isCorrect: false }] } },
         { content: 'Mã HTTP nào cho biết thành công?', position: 2, options: { create: [{ content: '404', position: 0, isCorrect: false }, { content: '200', position: 1, isCorrect: true }] } },
       ] } } });

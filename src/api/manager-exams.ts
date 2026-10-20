@@ -9,16 +9,36 @@ export const attemptStatusLabels = { IN_PROGRESS: 'Đang làm', SUBMITTED: 'Đã
 export interface ManagerOption { id: string; content: string; position: number; isCorrect: boolean }
 export interface ManagerQuestion { id: string; content: string; position: number; options: ManagerOption[] }
 export interface ManagerExam extends ExamInfo { managerId?: string; questions?: ManagerQuestion[] }
-export interface ExamPayload { title: string; description: string; instructions: string; durationMinutes: number }
+export interface ExamPayload {
+  title: string
+  description?: string
+  instructions?: string
+  durationMinutes: number
+  opensAt?: string | null
+  closesAt?: string | null
+  maxAttempts?: number
+}
 export interface QuestionPayload { content: string; position: number; options: string[]; correctOptionIndex: number }
 export interface ExamStudentResult {
   id: string; status: AttemptStatus; startedAt: string; deadlineAt: string; submittedAt: string | null; cancelledAt: string | null
   score: number | null; totalQuestions: number; correctCount: number | null; incorrectCount: number | null
   user: { id: string; fullName: string; email: string }
 }
+export interface LeaderboardItem {
+  rank: number
+  userId: string
+  fullName: string
+  email: string
+  avatar: string | null
+  bestScore: number
+  attemptId: string
+  durationSeconds: number
+  submittedAt: string | null
+}
 export interface ManagerResults {
   exam: { id: string; title: string; status: ExamStatus; durationMinutes: number }
   data: ExamStudentResult[]
+  leaderboard?: LeaderboardItem[]
   meta: { page: number; limit: number; total: number; totalPages: number }
   summary: { totalAttempts: number; inProgressCount: number; submittedCount: number; cancelledCount: number; averageScore: number | null; highestScore: number | null; lowestScore: number | null }
 }
@@ -38,6 +58,9 @@ export const managerExamsApi = {
   async remove(id: string): Promise<void> { await api.delete(`/exams/${id}`) },
   async publish(id: string): Promise<ManagerExam> { return (await api.put<ManagerExam>(`/exams/${id}/publish`)).data },
   async close(id: string): Promise<ManagerExam> { return (await api.put<ManagerExam>(`/exams/${id}/close`)).data },
+  async reopen(id: string, payload?: { closesAt?: string | null }): Promise<ManagerExam> {
+    return (await api.post<ManagerExam>(`/exams/${id}/reopen`, payload ?? {})).data
+  },
   async createQuestion(id: string, payload: QuestionPayload): Promise<ManagerQuestion> {
     return (await api.post<ManagerQuestion>(`/exams/${id}/questions`, payload)).data
   },
