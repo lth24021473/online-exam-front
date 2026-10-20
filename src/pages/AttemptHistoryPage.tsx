@@ -1,10 +1,11 @@
 import axios from 'axios'
 import { ArrowRight, CheckCircle2, Clock3, History, RefreshCw, XCircle } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { attemptsApi, getAttemptErrorMessage } from '../api/attempts'
 import { clearAttemptCache, readAttemptCache } from '../attempts/attempt-storage'
 import { useAuth } from '../auth/useAuth'
+import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
 
 type HistoryResponse = Awaited<ReturnType<typeof attemptsApi.history>>
 type AttemptItem = HistoryResponse['items'][number]
@@ -20,30 +21,56 @@ function formatDate(value: string | null | undefined): string {
   return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
 }
 
-function getStatus(item: AttemptItem) {
+function hasExpired(item: AttemptItem, now: number) {
+  const deadline = Date.parse(item.deadlineAt)
+  return item.expired || (Number.isFinite(deadline) && deadline <= now)
+}
+
+function getStatus(item: AttemptItem, expired: boolean) {
   if (item.status === 'SUBMITTED') return { name: 'Đã nộp', className: 'attempt-status-submitted', icon: CheckCircle2 }
   if (item.status === 'CANCELLED') return { name: 'Đã hủy', className: 'attempt-status-cancelled', icon: XCircle }
-  return { name: item.expired ? 'Đã hết giờ' : 'Đang làm', className: item.expired ? 'attempt-status-expired' : 'attempt-status-active', icon: Clock3 }
+  return { name: expired ? 'Đã hết giờ' : 'Đang làm', className: expired ? 'attempt-status-expired' : 'attempt-status-active', icon: Clock3 }
 }
 
 export default function AttemptHistoryPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const userId = user?.id
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<StatusFilter>('')
   const [version, setVersion] = useState(0)
   const [state, setState] = useState<HistoryState | null>(null)
+  const [now, setNow] = useState(() => Date.now())
   const [cancelSelection, setCancelSelection] = useState<AttemptItem | null>(null)
   const [cancelling, setCancelling] = useState(false)
-  const [actionMessage, setActionMessage] = useState<{ error: boolean; text: string } | null>(null)
+  const [actionError, setActionError] = useState('')
+  const [notice, setNotice] = useAutoDismissNotice()
   const mounted = useRef(false)
   const cancelLock = useRef(false)
   const cancelHeading = useRef<HTMLHeadingElement>(null)
   const key = `${page}:${status}:${version}`
+  function clearActionMessage() { setActionError(''); setNotice('') }
 
   useEffect(() => {
     mounted.current = true
     return () => { mounted.current = false }
+  }, [])
+
+  useEffect(() => {
+    const updateClock = () => {
+      const checkedAt = Date.now()
+      setNow(checkedAt)
+      setCancelSelection((selection) => selection && hasExpired(selection, checkedAt) ? null : selection)
+    }
+    const updateVisibleClock = () => { if (document.visibilityState === 'visible') updateClock() }
+    const timer = window.setInterval(updateClock, 1000)
+    window.addEventListener('focus', updateClock)
+    document.addEventListener('visibilitychange', updateVisibleClock)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', updateClock)
+      document.removeEventListener('visibilitychange', updateVisibleClock)
+    }
   }, [])
 
   useEffect(() => {
@@ -79,23 +106,31 @@ export default function AttemptHistoryPage() {
 
   async function confirmCancel() {
     if (!cancelSelection || cancelLock.current) return
+    const checkedAt = Date.now()
+    if (hasExpired(cancelSelection, checkedAt)) {
+      setNow(checkedAt)
+      setCancelSelection(null)
+      clearActionMessage()
+      setActionError('Bài thi đã hết giờ. Hãy xem kết quả.')
+      return
+    }
     cancelLock.current = true
     setCancelling(true)
-    setActionMessage(null)
+    clearActionMessage()
     try {
       await attemptsApi.cancel(cancelSelection.id)
       if (userId && readAttemptCache(userId, cancelSelection.exam.id)?.session.attempt.id === cancelSelection.id) {
         clearAttemptCache(userId, cancelSelection.exam.id)
       }
       if (mounted.current) {
-        setActionMessage({ error: false, text: 'Đã hủy bài. Bài thi vẫn được lưu trong lịch sử của bạn.' })
+        setNotice('Đã hủy bài. Bài thi vẫn được lưu trong lịch sử của bạn.')
         setCancelSelection(null)
         setVersion((value) => value + 1)
       }
     } catch (error) {
       if (mounted.current) {
         const conflict = axios.isAxiosError(error) && error.response?.status === 409
-        setActionMessage({ error: true, text: conflict ? 'Bài thi đã đổi trạng thái. Danh sách đang được cập nhật; hãy kiểm tra lại.' : getAttemptErrorMessage(error) })
+        setActionError(conflict ? 'Bài thi đã đổi trạng thái. Danh sách đang được cập nhật; hãy kiểm tra lại.' : getAttemptErrorMessage(error))
         if (conflict) {
           setCancelSelection(null)
           setVersion((value) => value + 1)
@@ -121,7 +156,7 @@ export default function AttemptHistoryPage() {
           setStatus(event.target.value as StatusFilter)
           setPage(1)
           setCancelSelection(null)
-          setActionMessage(null)
+          clearActionMessage()
         }}>
           <option value="">Tất cả trạng thái</option>
           <option value="IN_PROGRESS">Đang làm</option>
@@ -131,7 +166,8 @@ export default function AttemptHistoryPage() {
       </label>
       <button type="button" className="button button-secondary button-inline" disabled={!current || cancelling} onClick={() => setVersion((value) => value + 1)}><RefreshCw size={16} aria-hidden="true" /> Làm mới</button>
     </div>
-    {actionMessage && <p className={actionMessage.error ? 'form-error' : 'form-success'} role={actionMessage.error ? 'alert' : 'status'}>{actionMessage.text}</p>}
+    {actionError && <p className="form-error" role="alert">{actionError}</p>}
+    {notice && <p className="form-success" role="status">{notice}</p>}
     {cancelSelection && <section className="attempt-cancel-confirm exam-card" aria-labelledby="cancel-attempt-heading">
       <h2 id="cancel-attempt-heading" tabIndex={-1} ref={cancelHeading}>Hủy bài đang làm?</h2>
       <p>Bài “{cancelSelection.exam.title}” sẽ kết thúc mà không chấm điểm. Bạn sẽ không thể tiếp tục bài đã hủy.</p>
@@ -148,7 +184,8 @@ export default function AttemptHistoryPage() {
       <p className="history-count" role="status">{history.meta.total} bài thi{status ? ' phù hợp' : ''}</p>
       <div className="attempt-history-list">
         {history.items.map((item) => {
-          const state = getStatus(item)
+          const expired = hasExpired(item, now)
+          const state = getStatus(item, expired)
           const StatusIcon = state.icon
           return <article className="attempt-history-card exam-card" key={item.id}>
             <div className="attempt-history-main">
@@ -165,10 +202,16 @@ export default function AttemptHistoryPage() {
               {item.status === 'SUBMITTED' && <p className="history-score" aria-label="Điểm bài thi"><strong>{typeof item.score === 'number' ? numberFormat.format(item.score) : '—'}</strong> / {numberFormat.format(item.maxScore)}</p>}
               <p>{item.totalQuestions} câu hỏi</p>
               <div className="attempt-history-actions">
-                {(item.status === 'SUBMITTED' || item.expired) && item.status !== 'CANCELLED' && <Link className="button button-secondary button-inline" to={`/attempts/${item.id}/result`} state={{ examId: item.exam.id }}>Xem kết quả <ArrowRight size={16} aria-hidden="true" /></Link>}
-                {item.status === 'IN_PROGRESS' && !item.expired && <>
-                  <Link className="button button-primary button-inline" to={`/exams/${item.exam.id}/take`}>Tiếp tục bài <ArrowRight size={16} aria-hidden="true" /></Link>
-                  <button type="button" className="attempt-cancel-link" disabled={cancelling} onClick={() => { setCancelSelection(item); setActionMessage(null) }}>Hủy bài</button>
+                {(item.status === 'SUBMITTED' || expired) && item.status !== 'CANCELLED' && <Link className="button button-secondary button-inline" to={`/attempts/${item.id}/result`} state={{ examId: item.exam.id }}>Xem kết quả <ArrowRight size={16} aria-hidden="true" /></Link>}
+                {item.status === 'IN_PROGRESS' && !expired && <>
+                  <Link className="button button-primary button-inline" to={`/exams/${item.exam.id}/take`} onClick={(event) => {
+                    const checkedAt = Date.now()
+                    if (!hasExpired(item, checkedAt)) return
+                    event.preventDefault()
+                    setNow(checkedAt)
+                    navigate(`/attempts/${item.id}/result`, { state: { examId: item.exam.id } })
+                  }}>Tiếp tục bài <ArrowRight size={16} aria-hidden="true" /></Link>
+                  <button type="button" className="attempt-cancel-link" disabled={cancelling} onClick={() => { setCancelSelection(item); clearActionMessage() }}>Hủy bài</button>
                 </>}
                 {item.status === 'CANCELLED' && <span className="history-cancelled-note">Không chấm điểm</span>}
               </div>

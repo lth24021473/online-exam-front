@@ -4,9 +4,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { AuthRole, AuthUser } from '../api/auth.api'
 import { adminUsersApi, getAdminErrorMessage } from '../api/admin-users'
 import type { UpdatedAdminUser } from '../api/admin-users'
-import { expireSession } from '../api/axios'
+import { expireSession, getAccessToken } from '../api/axios'
 import { useAuth } from '../auth/useAuth'
 import { accountRoles, roleLabels } from '../auth/roles'
+import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
 import './AdminUsersPage.css'
 
 type LoadState<T> = { key: string; value: T } | { key: string; error: string }
@@ -27,7 +28,8 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
   const [role, setRole] = useState<AuthRole>('STUDENT')
   const [confirmation, setConfirmation] = useState<'role' | 'delete' | null>(null)
   const [busy, setBusy] = useState(false)
-  const [feedback, setFeedback] = useState<{ text: string; error?: boolean } | null>(null)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useAutoDismissNotice()
   const mutationLock = useRef(false)
   const confirmCancel = useRef<HTMLButtonElement>(null)
   const key = `${id}:${revision}`
@@ -51,8 +53,11 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
 
   const current = loaded?.key === key ? loaded : null
   const account = current && 'value' in current ? current.value : null
+  function clearFeedback() { setError(''); setNotice('') }
 
-  const finishOwnSession = (message: string) => {
+  const finishOwnSession = (message: string, requestToken: string | null) => {
+    // A delayed response from a previous login must not clear a newer session.
+    if (!requestToken || getAccessToken() !== requestToken) return
     expireSession(message)
     navigate('/login', { replace: true })
   }
@@ -60,24 +65,25 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
   async function confirmAction() {
     if (!account || !confirmation || mutationLock.current) return
     mutationLock.current = true
+    const requestToken = getAccessToken()
     setBusy(true)
     onBusy(true)
-    setFeedback(null)
+    clearFeedback()
     try {
       if (confirmation === 'role') {
         const updated = await adminUsersApi.updateRole(account.id, role)
         if (account.id === currentUserId) {
-          finishOwnSession('Vai trò của bạn đã thay đổi. Vui lòng đăng nhập lại.')
+          finishOwnSession('Vai trò của bạn đã thay đổi. Vui lòng đăng nhập lại.', requestToken)
           return
         }
         setLoaded({ key, value: { ...account, ...updated } })
         setRole(updated.role)
         onUpdate(updated)
-        setFeedback({ text: 'Đã cập nhật vai trò. Người dùng cần đăng nhập lại.' })
+        setNotice('Đã cập nhật vai trò. Người dùng cần đăng nhập lại.')
       } else {
         await adminUsersApi.remove(account.id)
         if (account.id === currentUserId) {
-          finishOwnSession('Tài khoản của bạn đã được xóa.')
+          finishOwnSession('Tài khoản của bạn đã được xóa.', requestToken)
           return
         }
         onDelete(account.id)
@@ -85,7 +91,7 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
       setConfirmation(null)
     } catch (error) {
       setConfirmation(null)
-      setFeedback({ text: getAdminErrorMessage(error), error: true })
+      setError(getAdminErrorMessage(error))
     } finally {
       mutationLock.current = false
       setBusy(false)
@@ -105,15 +111,16 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
           <div><dt>Ngày tạo</dt><dd>{formatDate(account.createdAt)}</dd></div>
           <div><dt>Cập nhật</dt><dd>{formatDate(account.updatedAt)}</dd></div>
         </dl>
-        {feedback && <p className={feedback.error ? 'form-error' : 'form-success'} role={feedback.error ? 'alert' : 'status'}>{feedback.text}</p>}
+        {error && <p className="form-error" role="alert">{error}</p>}
+        {notice && <p className="form-success" role="status">{notice}</p>}
         <form className="admin-role-form" onSubmit={(event) => {
           event.preventDefault()
-          if (!busy && role !== account.role) { setFeedback(null); setConfirmation('role') }
+          if (!busy && role !== account.role) { clearFeedback(); setConfirmation('role') }
         }}>
           <label htmlFor="admin-user-role">Vai trò</label>
           <select id="admin-user-role" value={role} disabled={busy || Boolean(confirmation)} onChange={(event) => {
             setRole(event.target.value as AuthRole)
-            setFeedback(null)
+            clearFeedback()
           }}>
             {accountRoles.map((value) => <option key={value} value={value}>{roleLabels[value]}</option>)}
           </select>
@@ -121,7 +128,7 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
         </form>
         <p className="exam-muted admin-role-help">Đổi vai trò sẽ kết thúc các phiên đăng nhập hiện tại của tài khoản.</p>
         <button type="button" className="button button-danger button-inline" disabled={busy || Boolean(confirmation)} onClick={() => {
-          setFeedback(null)
+          clearFeedback()
           setConfirmation('delete')
         }}><Trash2 size={17} aria-hidden="true" /> Xóa tài khoản</button>
 
@@ -150,7 +157,7 @@ export default function AdminUsersPage() {
   const [loaded, setLoaded] = useState<LoadState<AuthUser[]> | null>(null)
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState(false)
-  const [notice, setNotice] = useState('')
+  const [notice, setNotice] = useAutoDismissNotice()
   const key = String(revision)
 
   useEffect(() => {

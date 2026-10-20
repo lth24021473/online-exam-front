@@ -1,4 +1,4 @@
-.settings-page { width: 100%; max-width: 920px; margin-inline: auto; min-width: 0; }
+.settings-page { width: 100%; min-width: 0; }
 .settings-page > header p { margin: 0; color: var(--text-muted); }
 .settings-page .account-card { min-width: 0; padding: 28px; border: 1px solid var(--border); border-radius: 15px; background: var(--surface); }
 .settings-page .account-settings-card { width: 100%; }

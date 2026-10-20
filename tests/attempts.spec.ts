@@ -445,6 +445,86 @@ test('history filters server records and only offers actions appropriate to each
   expect(api.calls.filter((call) => call.key === 'GET /attempts').at(-1)?.url).toContain('status=CANCELLED')
 })
 
+test('history reaches its deadline while open and offers the existing result without starting another attempt', async ({ page, api }) => {
+  await page.clock.install({ time: new Date('2026-10-03T00:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-10-03T00:00:01Z'))
+  api.history = [{ ...item(attemptId, 'IN_PROGRESS', 'Bài sắp hết giờ'), deadlineAt: '2026-10-03T00:00:03Z' }]
+  await page.goto('/history')
+  const card = page.getByRole('article')
+  await expect(card.getByRole('link', { name: 'Tiếp tục bài', exact: true })).toBeVisible()
+  await card.getByRole('button', { name: 'Hủy bài', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Hủy bài đang làm?', exact: true })).toBeVisible()
+  await page.clock.runFor(1999)
+  await expect(card.getByRole('link', { name: 'Tiếp tục bài', exact: true })).toBeVisible()
+  await page.clock.runFor(1)
+  await expect(card.getByText('Đã hết giờ', { exact: true })).toBeVisible()
+  await expect(card.getByRole('link', { name: 'Tiếp tục bài', exact: true })).toHaveCount(0)
+  await expect(card.getByRole('button', { name: 'Hủy bài', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Hủy bài đang làm?', exact: true })).toHaveCount(0)
+  await expect(card.getByRole('link', { name: 'Xem kết quả', exact: true })).toHaveAttribute('href', '/attempts/' + attemptId + '/result')
+  api.submitted = true
+  await card.getByRole('link', { name: 'Xem kết quả', exact: true }).click()
+  await expect(page).toHaveURL('/attempts/' + attemptId + '/result')
+  await expect(page.getByLabel('Điểm bài thi', { exact: true })).toContainText(/7[,.]5\s*\/\s*10/)
+  expect(api.calls.some((call) => call.key === 'GET /attempts/' + attemptId + '/result')).toBe(true)
+  expect(api.calls.every((call) => call.key.startsWith('GET '))).toBe(true)
+})
+
+test('history rechecks the deadline when cancellation is confirmed between clock updates', async ({ page, api }) => {
+  await page.clock.install({ time: new Date('2026-10-03T00:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-10-03T00:00:01Z'))
+  api.history = [{ ...item(attemptId, 'IN_PROGRESS', 'Bài sát hạn nộp'), deadlineAt: '2026-10-03T00:00:01.100Z' }]
+  await page.goto('/history')
+  await page.getByRole('button', { name: 'Hủy bài', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Xác nhận hủy', exact: true })).toBeVisible()
+  // The one-second UI clock has not ticked yet; the action must check the current time itself.
+  await page.clock.runFor(100)
+  await page.getByRole('button', { name: 'Xác nhận hủy', exact: true }).click()
+  await expect(page.getByRole('alert')).toHaveText('Bài thi đã hết giờ. Hãy xem kết quả.')
+  await expect(page.getByRole('heading', { name: 'Hủy bài đang làm?', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('article').getByText('Đã hết giờ', { exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Xem kết quả', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Tiếp tục bài', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Hủy bài', exact: true })).toHaveCount(0)
+  expect(api.calls.every((call) => call.key.startsWith('GET '))).toBe(true)
+  expect(api.cancelled).toBe(false)
+})
+
+test('history resume click checks the deadline between clock updates and opens the old result', async ({ page, api }) => {
+  await page.clock.install({ time: new Date('2026-10-03T00:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-10-03T00:00:01Z'))
+  api.history = [{ ...item(attemptId, 'IN_PROGRESS', 'Bài hết giờ giữa hai tick'), deadlineAt: '2026-10-03T00:00:01.100Z' }]
+  await page.goto('/history')
+  const resume = page.getByRole('link', { name: 'Tiếp tục bài', exact: true })
+  await expect(resume).toBeVisible()
+  await page.clock.runFor(100)
+  // The stale visible link must open the existing result, never the start/resume endpoint.
+  await expect(resume).toBeVisible()
+  api.submitted = true
+  await resume.click()
+  await expect(page).toHaveURL('/attempts/' + attemptId + '/result')
+  await expect(page.getByLabel('Điểm bài thi', { exact: true })).toContainText(/7[,.]5\s*\/\s*10/)
+  expect(api.calls.some((call) => call.key === 'GET /attempts/' + attemptId + '/result')).toBe(true)
+  expect(api.calls.every((call) => call.key.startsWith('GET '))).toBe(true)
+})
+
+test('history cancellation notice expires after one second while the cancelled record remains', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-03T00:00:00Z') })
+  await openQuiz(page)
+  await page.goto('/history')
+  await expect(page.getByRole('button', { name: 'Hủy bài', exact: true })).toBeVisible()
+  await page.clock.pauseAt(new Date('2026-10-03T01:00:00Z'))
+  await page.getByRole('button', { name: 'Hủy bài', exact: true }).click()
+  await page.getByRole('button', { name: 'Xác nhận hủy', exact: true }).click()
+  const notice = page.getByRole('status').filter({ hasText: 'Đã hủy bài. Bài thi vẫn được lưu trong lịch sử của bạn.' })
+  await expect(notice).toBeVisible()
+  await page.clock.runFor(999)
+  await expect(notice).toBeVisible()
+  await page.clock.runFor(1)
+  await expect(notice).toHaveCount(0)
+  await expect(page.getByRole('article').getByText('Đã hủy', { exact: true })).toBeVisible()
+})
+
 test('history pagination requests a new server page', async ({ page, api }) => {
   api.history = Array.from({ length: 12 }, (_, index) => item(`6700077777777777777777${String(index).padStart(2, '0')}`, 'SUBMITTED', `Bài kiểm tra ${index + 1}`))
   await page.goto('/history')

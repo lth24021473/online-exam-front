@@ -182,6 +182,31 @@ test('deleting another account requires explicit confirmation and refreshes the 
   }])
 })
 
+test('account role and deletion notices each expire after one second', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-03T00:00:00Z') })
+  await openAdmin(page)
+  await selectUser(page, student)
+  await page.clock.pauseAt(new Date('2026-10-03T01:00:00Z'))
+  await page.getByLabel('Vai trò', { exact: true }).selectOption('EXAM_MANAGER')
+  await page.getByRole('button', { name: 'Lưu vai trò', exact: true }).click()
+  await page.getByRole('button', { name: 'Xác nhận đổi vai trò', exact: true }).click()
+  const roleNotice = page.getByRole('status').filter({ hasText: 'Đã cập nhật vai trò.' })
+  await expect(roleNotice).toBeVisible()
+  await page.clock.runFor(999)
+  await expect(roleNotice).toBeVisible()
+  await page.clock.runFor(1)
+  await expect(roleNotice).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Xóa tài khoản', exact: true }).click()
+  await page.getByRole('button', { name: 'Xác nhận xóa', exact: true }).click()
+  const deleteNotice = page.getByRole('status').filter({ hasText: 'Đã xóa tài khoản.' })
+  await expect(deleteNotice).toBeVisible()
+  await page.clock.runFor(999)
+  await expect(deleteNotice).toBeVisible()
+  await page.clock.runFor(1)
+  await expect(deleteNotice).toHaveCount(0)
+})
+
 for (const role of ['STUDENT', 'EXAM_MANAGER'] as const) {
   test(`${role} cannot open the administration route or trigger admin requests`, async ({ page, api }) => {
     api.role = role
@@ -359,3 +384,50 @@ test('deleting an account that owns exams or attempts shows the translated confl
   await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(mutationCalls(api)).toHaveLength(1)
 })
+
+for (const action of ['role', 'delete'] as const) {
+  test(`a delayed successful own ${action} change cannot end a newer login session`, async ({ page, api }) => {
+    let release: () => void = () => {}
+    const pending = new Promise<void>((resolve) => { release = resolve })
+    const method = action === 'role' ? 'PATCH' : 'DELETE'
+    const path = `/admin/users/${currentAdmin.id}${action === 'role' ? '/role' : ''}`
+    api.handle(`${method} ${path}`, async (route) => {
+      await pending
+      if (action === 'role') await route.fulfill({ json: { ...currentAdmin, role: 'STUDENT' } })
+      else await route.fulfill({ status: 204 })
+    })
+    await openAdmin(page)
+    await selectUser(page, currentAdmin)
+    if (action === 'role') {
+      await page.getByLabel('Vai trò', { exact: true }).selectOption('STUDENT')
+      await page.getByRole('button', { name: 'Lưu vai trò', exact: true }).click()
+      await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận đổi vai trò', exact: true }).click()
+    } else {
+      await page.getByRole('button', { name: 'Xóa tài khoản', exact: true }).click()
+      await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận xóa', exact: true }).click()
+    }
+    try {
+      await expect.poll(() => mutationCalls(api).length).toBe(1)
+      await page.getByRole('link', { name: 'Cài đặt', exact: true }).click()
+      await page.getByRole('button', { name: 'Đăng xuất tài khoản', exact: true }).click()
+      await expectSessionEnded(page)
+      api.role = 'STUDENT'
+      api.handle('POST /auth/login', reply(200, { accessToken: 'newer-session-token', user: student }))
+      await page.getByLabel('Địa chỉ email', { exact: true }).fill(student.email)
+      await page.getByLabel('Mật khẩu', { exact: true }).fill('StudentPass123')
+      await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
+      await expect(page).toHaveURL('/settings')
+      await page.getByRole('link', { name: 'Trang chủ', exact: true }).click()
+      await expect(page).toHaveURL('/dashboard')
+      await expect(page.getByRole('heading', { name: `Xin chào, ${student.fullName}!` })).toBeVisible()
+      const response = page.waitForResponse((value) => value.request().method() === method && new URL(value.url()).pathname === '/api/v1' + path)
+      release()
+      await (await response).finished()
+      // The old XHR callback and React redirect must finish before checking the new session.
+      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+      await expect(page).toHaveURL('/dashboard')
+      await expect(page.getByRole('heading', { name: `Xin chào, ${student.fullName}!` })).toBeVisible()
+      expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBe('newer-session-token')
+    } finally { release() }
+  })
+}

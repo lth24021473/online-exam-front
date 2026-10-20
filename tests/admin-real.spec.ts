@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { APIRequestContext, Page } from '@playwright/test'
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import type { AuthRole } from '../src/api/auth.api'
 
 type Fixture = {
@@ -9,6 +10,7 @@ type Fixture = {
   target: { id: string; email: string }
   password: string
   apiUrl: string
+  revokedTokenHashes?: string[]
 }
 type Login = { accessToken: string; user: { role: AuthRole } }
 let fixture: Fixture
@@ -103,5 +105,14 @@ test.describe('ADMIN UI with the live API and two owned accounts', () => {
       headers: { Authorization: `Bearer ${studentToken}` },
     })
     expect(forbidden.status()).toBe(403)
+
+    // Record ownership before logout so cleanup also handles a lost response or a failed assertion.
+    fixture.revokedTokenHashes = [...(fixture.revokedTokenHashes ?? []), createHash('sha256').update(studentToken!).digest('hex')]
+    writeFileSync(process.env.FRONT_ADMIN_FIXTURE!, JSON.stringify(fixture), { encoding: 'utf8', mode: 0o600 })
+    await page.getByRole('link', { name: 'Cài đặt', exact: true }).click()
+    await page.getByRole('button', { name: 'Đăng xuất tài khoản', exact: true }).click()
+    await expect(page).toHaveURL('/login')
+    expect(await page.evaluate(() => localStorage.getItem('online-exam.access-token'))).toBeNull()
+    await verifyToken(context.request, studentToken!, 401)
   })
 })

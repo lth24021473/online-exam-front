@@ -195,7 +195,7 @@ test('direct registration shows success on login without creating an authenticat
   await expect(page.getByLabel('Mật khẩu', { exact: true })).toHaveValue('')
   expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBeNull()
   await capturePreview(page, 'test-results/registration-success.png')
-  await page.clock.runFor(1999)
+  await page.clock.runFor(999)
   await expect(page.getByRole('status')).toBeVisible()
   await page.clock.runFor(1)
   await expect(page.getByRole('status')).toHaveCount(0)
@@ -349,3 +349,13 @@ test('the supplied study photo loads and login previews are captured', async ({ 
   await capturePreview(page, 'test-results/preview-login-mobile.png')
 })
 
+
+test('a STUDENT login returns to dashboard when a saved destination requires manager access', async ({ page, api }) => {
+  api.handle('POST /auth/login', reply(200, session))
+  await page.goto('/manage/exams?status=DRAFT')
+  await expect(page).toHaveURL('/login')
+  await fillLogin(page)
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
+  await expect(page).toHaveURL('/dashboard')
+  expect(api.calls.some((call) => call.key.startsWith('GET /exams'))).toBe(false)
+})

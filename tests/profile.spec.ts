@@ -172,7 +172,7 @@ test('saved profile edits update account details and home greeting and persist a
   expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call))).toBe(true)
 })
 
-test('account save notices expire after two seconds and repeated saves restart their lifetime', async ({ page }) => {
+test('account save notices expire after one second and repeated saves restart their lifetime', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-03T00:00:00Z') })
   await page.goto('/profile?tab=edit')
   const save = page.getByRole('button', { name: 'Lưu thay đổi', exact: true })
@@ -182,19 +182,19 @@ test('account save notices expire after two seconds and repeated saves restart t
 
   await save.click()
   await expect(notice).toBeVisible()
-  await page.clock.runFor(1999)
+  await page.clock.runFor(999)
   await expect(notice).toBeVisible()
   await page.clock.runFor(1)
   await expect(notice).toHaveCount(0)
 
   await save.click()
   await expect(notice).toBeVisible()
-  await page.clock.runFor(1000)
+  await page.clock.runFor(500)
   await save.click()
   await expect(notice).toBeVisible()
-  await page.clock.runFor(1000)
+  await page.clock.runFor(500)
   await expect(notice).toBeVisible()
-  await page.clock.runFor(999)
+  await page.clock.runFor(499)
   await expect(notice).toBeVisible()
   await page.clock.runFor(1)
   await expect(notice).toHaveCount(0)
@@ -304,7 +304,7 @@ test('avatar upload persists locally across reload and can be removed', async ({
   expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call))).toBe(true)
 })
 
-test('overlapping avatar and cover notices expire independently after two seconds', async ({ page }) => {
+test('overlapping avatar and cover notices expire independently after one second', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-03T00:00:00Z') })
   await page.goto('/profile?tab=edit')
   await expect(page.getByRole('button', { name: 'Chỉnh sửa ảnh đại diện', exact: true })).toBeVisible()
@@ -314,16 +314,16 @@ test('overlapping avatar and cover notices expire independently after two second
 
   await page.getByLabel('Chọn ảnh đại diện', { exact: true }).setInputFiles(avatar)
   await expect(avatarNotice).toBeVisible()
-  await page.clock.runFor(1000)
+  await page.clock.runFor(500)
   await page.getByLabel('Chọn ảnh bìa', { exact: true }).setInputFiles(cover)
   await expect(coverNotice).toBeVisible()
-  await page.clock.runFor(999)
+  await page.clock.runFor(499)
   await expect(avatarNotice).toBeVisible()
   await expect(coverNotice).toBeVisible()
   await page.clock.runFor(1)
   await expect(avatarNotice).toHaveCount(0)
   await expect(coverNotice).toBeVisible()
-  await page.clock.runFor(999)
+  await page.clock.runFor(499)
   await expect(coverNotice).toBeVisible()
   await page.clock.runFor(1)
   await expect(coverNotice).toHaveCount(0)
@@ -332,7 +332,7 @@ test('overlapping avatar and cover notices expire independently after two second
   await page.getByRole('button', { name: 'Xóa ảnh bìa', exact: true }).click()
   const removalNotices = page.getByRole('status').filter({ hasText: 'đã được xóa trên trình duyệt này.' })
   await expect(removalNotices).toHaveCount(2)
-  await page.clock.runFor(1999)
+  await page.clock.runFor(999)
   await expect(removalNotices).toHaveCount(2)
   await page.clock.runFor(1)
   await expect(removalNotices).toHaveCount(0)

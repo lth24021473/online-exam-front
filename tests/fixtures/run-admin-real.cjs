@@ -20,7 +20,7 @@ try {
   if (fs.existsSync(manifest)) throw new Error('Previous ADMIN manifest exists. Clean it before running another test.');
   attempted = true;
   run(helper, ['create']);
-  run(path.join(root, 'node_modules/@playwright/test/cli.js'), ['test', 'tests/admin-real.spec.ts', '--workers=1']);
+  run(path.join(root, 'node_modules/@playwright/test/cli.js'), ['test', 'tests/admin-real.spec.ts', '--workers=1', '--output=test-results/admin-real']);
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

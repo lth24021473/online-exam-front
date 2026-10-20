@@ -32,7 +32,7 @@ export default function ExamsPage() {
   }, [page, revision, role])
   const changePage = (value: number) => { setLoading(true); setError(''); setPage(value) }
   return <div className="exam-page">
-    <header className="exam-heading"><div><h1>Khám phá đề thi</h1></div><BookOpen size={40} aria-hidden="true" /></header>
+    <header className="exam-heading"><div><h1>Khám phá đề thi</h1>{!studentCatalog && <Link className="text-link" to="/manage/exams">Quản lý đề thi</Link>}</div><BookOpen size={40} aria-hidden="true" /></header>
     <form className="exam-code-form exam-panel" onSubmit={(event) => {
       event.preventDefault()
       const id = examId.trim()
