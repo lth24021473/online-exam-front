@@ -24,7 +24,7 @@
 }
 
 .student-class-detail-title-group {
-  flex: 1 1 360px;
+  flex: 1 1 100%;
 }
 
 .student-class-detail-title-group h1 {

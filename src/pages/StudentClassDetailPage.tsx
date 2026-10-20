@@ -101,25 +101,6 @@ export default function StudentClassDetailPage() {
               {classroom.description || 'Chưa có mô tả cho lớp học này.'}
             </p>
           </div>
-
-          <div className="student-class-teacher-card">
-            <div className="student-class-teacher-avatar" aria-hidden="true">
-              {classroom.manager?.fullName
-                ? classroom.manager.fullName.trim().charAt(0).toUpperCase()
-                : 'G'}
-            </div>
-            <div className="student-class-teacher-info">
-              <span className="student-class-teacher-badge">Giáo viên phụ trách</span>
-              <span className="student-class-teacher-name">
-                {classroom.manager?.fullName || 'Chưa cập nhật'}
-              </span>
-              {classroom.manager?.email && (
-                <span className="student-class-teacher-email">
-                  {classroom.manager.email}
-                </span>
-              )}
-            </div>
-          </div>
         </div>
 
         <div className="student-class-detail-stats">
