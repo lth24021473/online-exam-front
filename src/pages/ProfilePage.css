@@ -259,3 +259,33 @@
 @media (max-width: 600px) {
   .account-edit-fields { grid-template-columns: 1fr; }
 }
+
+.profile-classes-link {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 10px 20px;
+  background: #ffcc00;
+  color: #1a1a1a;
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+  box-shadow: 3px 3px 0px 0px var(--border);
+  transition: transform 80ms, box-shadow 80ms, background 120ms;
+}
+
+.profile-classes-link:hover {
+  background: #e6b800;
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px var(--border);
+}
+
+.profile-classes-link:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px 0px var(--border);
+}
+

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, KeyboardEvent, SubmitEvent } from 'react'
 import { BookOpen, BriefcaseBusiness, CalendarDays, Camera, Check, ClipboardList, Mail, MapPin, ShieldCheck, UsersRound } from 'lucide-react'
-import { Navigate, useLocation, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import type { AuthUser } from '../api/auth.api'
 import { useAuth } from '../auth/useAuth'
 import { roleLabels } from '../auth/roles'
@@ -197,6 +197,7 @@ function ProfileContent({ user }: { user: AuthUser }) {
               <span className="account-card-icon"><UsersRound size={35} aria-hidden="true" /></span>
               <h3>Chưa có lớp học để hiển thị</h3>
               <p>Các lớp học của bạn sẽ xuất hiện tại đây khi có dữ liệu.</p>
+              <Link to="/classes" className="profile-classes-link">Đi tới Lớp học của tôi</Link>
             </div>
           </div>
         </section>

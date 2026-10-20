@@ -18,6 +18,8 @@ import ManagerExamDetailPage from '../pages/ManagerExamDetailPage'
 import ManagerExamResultsPage from '../pages/ManagerExamResultsPage'
 import ManagerClassesPage from '../pages/ManagerClassesPage'
 import ManagerClassDetailPage from '../pages/ManagerClassDetailPage'
+import StudentClassesPage from '../pages/StudentClassesPage'
+import StudentClassDetailPage from '../pages/StudentClassDetailPage'
 import AdminRoute from './AdminRoute'
 import AdminUsersPage from '../pages/AdminUsersPage'
 import ExamsPage from '../pages/ExamsPage'
@@ -44,6 +46,8 @@ export default function AppRouter() {
           <Route path="settings" element={<SettingsPage />} />
           <Route path="exams" element={<ExamsPage />} />
           <Route path="exams/:examId" element={<ExamDetailPage />} />
+          <Route path="classes" element={<StudentClassesPage />} />
+          <Route path="classes/:classId" element={<StudentClassDetailPage />} />
           <Route element={<ManagerRoute />}>
             <Route path="manage/exams" element={<ManagerExamsPage />} />
             <Route path="manage/exams/create" element={<ManagerCreateExamPage />} />

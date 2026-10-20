@@ -20,7 +20,12 @@ export default function AppLayout() {
               <NavLink to="/manage/classes"><GraduationCap size={18} aria-hidden="true" /> Lớp học</NavLink>
             </>
           ) : (
-            <NavLink to="/exams"><BookOpen size={18} aria-hidden="true" /> Đề thi</NavLink>
+            <>
+              <NavLink to="/exams"><BookOpen size={18} aria-hidden="true" /> Đề thi</NavLink>
+              {user?.role === 'STUDENT' && (
+                <NavLink to="/classes"><GraduationCap size={18} aria-hidden="true" /> Lớp học</NavLink>
+              )}
+            </>
           )}
           {user?.role === 'STUDENT' && <NavLink to="/history"><History size={18} aria-hidden="true" /> Lịch sử</NavLink>}
           {user?.role === 'ADMIN' && <NavLink to="/admin/users"><ShieldCheck size={18} aria-hidden="true" /> Quản trị</NavLink>}
