@@ -250,7 +250,7 @@ export default function StudentClassesPage() {
                   <input
                     type="password"
                     required
-                    placeholder="Nhập mật khẩu do giáo viên cung cấp"
+                    placeholder="Nhập mật khẩu"
                     value={joinPassword}
                     onChange={(e) => setJoinPassword(e.target.value)}
                   />
