@@ -21,6 +21,7 @@ function normalizeMetadata(payload: ExamPayload): ExamPayload {
     ...(payload.opensAt ? { opensAt: payload.opensAt } : {}),
     ...(payload.closesAt ? { closesAt: payload.closesAt } : {}),
     ...(payload.maxAttempts && payload.maxAttempts > 1 ? { maxAttempts: payload.maxAttempts } : {}),
+    ...(payload.classroomId ? { classroomId: payload.classroomId } : {}),
   }
 }
 
@@ -33,6 +34,7 @@ function metadata(exam: ManagerExam): ExamPayload {
     opensAt: exam.opensAt,
     closesAt: exam.closesAt,
     maxAttempts: exam.maxAttempts,
+    classroomId: exam.classroomId,
   })
 }
 function questionPayload(question: ManagerQuestion): QuestionPayload {

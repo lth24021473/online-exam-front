@@ -6,7 +6,10 @@ export interface ExamInfo {
   id: string; title: string; description: string | null; instructions: string | null
   durationMinutes: number; totalQuestions: number | null; status: 'DRAFT' | 'PUBLISHED' | 'CLOSED'
   opensAt?: string | null; closesAt?: string | null; maxAttempts?: number
+  classroomId?: string | null
 }
+export type Exam = ExamInfo
+export type ExamDetail = ExamInfo
 export interface ExamCatalog { items: ExamInfo[]; meta: { page: number; limit: number; total: number; totalPages: number }; demo: boolean }
 
 const demoId = import.meta.env.VITE_DEMO_EXAM_ID?.trim()

@@ -9,6 +9,7 @@ export const attemptStatusLabels = { IN_PROGRESS: 'Đang làm', SUBMITTED: 'Đã
 export interface ManagerOption { id: string; content: string; position: number; isCorrect: boolean }
 export interface ManagerQuestion { id: string; content: string; position: number; options: ManagerOption[] }
 export interface ManagerExam extends ExamInfo { managerId?: string; questions?: ManagerQuestion[] }
+export type ManagerExamDetail = ManagerExam
 export interface ExamPayload {
   title: string
   description?: string
@@ -17,6 +18,7 @@ export interface ExamPayload {
   opensAt?: string | null
   closesAt?: string | null
   maxAttempts?: number
+  classroomId?: string | null
 }
 export interface QuestionPayload { content: string; position: number; options: string[]; correctOptionIndex: number }
 export interface ExamStudentResult {
