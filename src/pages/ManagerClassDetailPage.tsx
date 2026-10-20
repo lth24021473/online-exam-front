@@ -4,6 +4,8 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { classroomsApi, getClassroomErrorMessage } from '../api/classrooms'
 import type { Classroom, ClassroomExam, ClassroomMember } from '../api/classrooms'
 import { examStatusLabels } from '../api/manager-exams'
+import { useAuth } from '../auth/useAuth'
+import { getUserDisplayInfo } from '../utils/user-display'
 import './ManagerExams.css'
 import './ManagerClassDetailPage.css'
 
@@ -20,6 +22,7 @@ function formatDateTime(value?: string | null): string {
 }
 
 export default function ManagerClassDetailPage() {
+  const { user } = useAuth()
   const { classId = '' } = useParams()
   const navigate = useNavigate()
 
@@ -327,35 +330,40 @@ export default function ManagerClassDetailPage() {
             </section>
           ) : (
             <div className="manager-class-members-list">
-              {members.map((member) => (
-                <div className="manager-class-member-row" key={member.id}>
-                  <div className="manager-class-member-info">
-                    <div className="manager-class-avatar" aria-hidden="true">
-                      {member.fullName
-                        ? member.fullName.trim().charAt(0).toUpperCase()
-                        : 'S'}
+              {members.map((member) => {
+                const memberInfo = getUserDisplayInfo(member, user)
+                return (
+                  <div className="manager-class-member-row" key={member.id}>
+                    <div className="manager-class-member-info">
+                      <div className="manager-class-avatar" aria-hidden="true">
+                        {memberInfo.avatar ? (
+                          <img src={memberInfo.avatar} alt={memberInfo.fullName} />
+                        ) : (
+                          memberInfo.initial
+                        )}
+                      </div>
+                      <div className="manager-class-member-text">
+                        <span className="manager-class-member-name">{memberInfo.fullName}</span>
+                        <span className="manager-class-member-email">{memberInfo.email}</span>
+                      </div>
                     </div>
-                    <div className="manager-class-member-text">
-                      <span className="manager-class-member-name">{member.fullName}</span>
-                      <span className="manager-class-member-email">{member.email}</span>
-                    </div>
-                  </div>
 
-                  <div className="manager-class-member-meta">
-                    <span>Tham gia: {formatDateTime(member.joinedAt)}</span>
-                    <button
-                      type="button"
-                      className="button button-danger button-inline"
-                      onClick={() => {
-                        setMemberToDelete(member)
-                        setRemoveMemberError('')
-                      }}
-                    >
-                      Xóa khỏi lớp
-                    </button>
+                    <div className="manager-class-member-meta">
+                      <span>Tham gia: {formatDateTime(member.joinedAt)}</span>
+                      <button
+                        type="button"
+                        className="button button-danger button-inline"
+                        onClick={() => {
+                          setMemberToDelete(member)
+                          setRemoveMemberError('')
+                        }}
+                      >
+                        Xóa khỏi lớp
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </section>

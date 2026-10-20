@@ -3,10 +3,13 @@ import { FileText, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { classroomsApi, getClassroomErrorMessage } from '../api/classrooms'
 import type { Classroom } from '../api/classrooms'
+import { useAuth } from '../auth/useAuth'
+import { getUserDisplayInfo } from '../utils/user-display'
 import './ManagerExams.css'
 import './StudentClassesPage.css'
 
 export default function StudentClassesPage() {
+  const { user } = useAuth()
   const [classrooms, setClassrooms] = useState<Classroom[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -76,11 +79,12 @@ export default function StudentClassesPage() {
   const filtered = classrooms.filter((item) => {
     const query = search.trim().toLowerCase()
     if (!query) return true
+    const teacher = getUserDisplayInfo(item.manager, user)
     return (
       item.name.toLowerCase().includes(query) ||
       item.code.toLowerCase().includes(query) ||
       (item.description && item.description.toLowerCase().includes(query)) ||
-      (item.manager?.fullName && item.manager.fullName.toLowerCase().includes(query))
+      teacher.fullName.toLowerCase().includes(query)
     )
   })
 
@@ -165,35 +169,39 @@ export default function StudentClassesPage() {
         <>
           <p className="exam-muted">{filtered.length} lớp học</p>
           <div className="student-classes-grid">
-            {filtered.map((classroom) => (
-              <article className="student-class-card" key={classroom.id}>
-                <div className="student-class-card-header">
-                  <h2>{classroom.name}</h2>
-                  <span className="student-class-code-badge">{classroom.code}</span>
-                </div>
-
-                <p className="student-class-card-desc">
-                  {classroom.description || 'Chưa có mô tả cho lớp học này.'}
-                </p>
-
-                <div className="student-class-teacher-box">
-                  <div className="student-class-teacher-avatar" aria-hidden="true">
-                    {classroom.manager?.fullName
-                      ? classroom.manager.fullName.trim().charAt(0).toUpperCase()
-                      : 'G'}
+            {filtered.map((classroom) => {
+              const teacherInfo = getUserDisplayInfo(classroom.manager, user)
+              return (
+                <article className="student-class-card" key={classroom.id}>
+                  <div className="student-class-card-header">
+                    <h2>{classroom.name}</h2>
+                    <span className="student-class-code-badge">{classroom.code}</span>
                   </div>
-                  <div className="student-class-teacher-info">
-                    <span className="student-class-teacher-label">Giáo viên phụ trách</span>
-                    <span className="student-class-teacher-name">
-                      {classroom.manager?.fullName || 'Chưa cập nhật'}
-                    </span>
-                    {classroom.manager?.email && (
-                      <span className="student-class-teacher-email">
-                        {classroom.manager.email}
+
+                  <p className="student-class-card-desc">
+                    {classroom.description || 'Chưa có mô tả cho lớp học này.'}
+                  </p>
+
+                  <div className="student-class-teacher-box">
+                    <div className="student-class-teacher-avatar" aria-hidden="true">
+                      {teacherInfo.avatar ? (
+                        <img src={teacherInfo.avatar} alt={teacherInfo.fullName} />
+                      ) : (
+                        teacherInfo.initial
+                      )}
+                    </div>
+                    <div className="student-class-teacher-info">
+                      <span className="student-class-teacher-label">Giáo viên phụ trách</span>
+                      <span className="student-class-teacher-name">
+                        {teacherInfo.fullName}
                       </span>
-                    )}
+                      {teacherInfo.email && (
+                        <span className="student-class-teacher-email">
+                          {teacherInfo.email}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
 
                 <div className="student-class-stats">
                   <span className="student-class-stat-item">
@@ -215,7 +223,8 @@ export default function StudentClassesPage() {
                   </Link>
                 </div>
               </article>
-            ))}
+            )
+          })}
           </div>
         </>
       )}

@@ -4,6 +4,8 @@ import { Link, useParams } from 'react-router-dom'
 import { classroomsApi, getClassroomErrorMessage } from '../api/classrooms'
 import type { Classroom, ClassroomExam, ClassroomMember } from '../api/classrooms'
 import { examStatusLabels } from '../api/manager-exams'
+import { useAuth } from '../auth/useAuth'
+import { getUserDisplayInfo } from '../utils/user-display'
 import './ManagerExams.css'
 import './StudentClassDetailPage.css'
 
@@ -20,6 +22,7 @@ function formatDateTime(value?: string | null): string {
 }
 
 export default function StudentClassDetailPage() {
+  const { user } = useAuth()
   const { classId = '' } = useParams()
 
   const [classroom, setClassroom] = useState<Classroom | null>(null)
@@ -208,34 +211,41 @@ export default function StudentClassDetailPage() {
       {activeTab === 'members' && (
         <section className="student-class-tab-pane" aria-label="Danh sách thành viên">
           {/* Teacher section */}
-          <div className="student-class-members-section">
-            <h3>Giáo viên quản lý</h3>
-            <div className="student-class-members-list">
-              <div className="student-class-member-row">
-                <div className="student-class-member-info">
-                  <div className="student-class-avatar avatar-teacher" aria-hidden="true">
-                    {classroom.manager?.fullName
-                      ? classroom.manager.fullName.trim().charAt(0).toUpperCase()
-                      : 'G'}
-                  </div>
-                  <div className="student-class-member-text">
-                    <span className="student-class-member-name">
-                      {classroom.manager?.fullName || 'Chưa cập nhật'}
-                    </span>
-                    <span className="student-class-member-email">
-                      {classroom.manager?.email || '—'}
-                    </span>
-                  </div>
-                </div>
+          {(() => {
+            const teacherInfo = getUserDisplayInfo(classroom.manager, user)
+            return (
+              <div className="student-class-members-section">
+                <h3>Giáo viên quản lý</h3>
+                <div className="student-class-members-list">
+                  <div className="student-class-member-row">
+                    <div className="student-class-member-info">
+                      <div className="student-class-avatar avatar-teacher" aria-hidden="true">
+                        {teacherInfo.avatar ? (
+                          <img src={teacherInfo.avatar} alt={teacherInfo.fullName} />
+                        ) : (
+                          teacherInfo.initial
+                        )}
+                      </div>
+                      <div className="student-class-member-text">
+                        <span className="student-class-member-name">
+                          {teacherInfo.fullName}
+                        </span>
+                        <span className="student-class-member-email">
+                          {teacherInfo.email}
+                        </span>
+                      </div>
+                    </div>
 
-                <div className="student-class-member-meta">
-                  <span className="student-class-role-badge student-class-role-badge-teacher">
-                    Giáo viên
-                  </span>
+                    <div className="student-class-member-meta">
+                      <span className="student-class-role-badge student-class-role-badge-teacher">
+                        Giáo viên
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            )
+          })()}
 
           {/* Fellow students section */}
           <div className="student-class-members-section">
@@ -247,28 +257,33 @@ export default function StudentClassDetailPage() {
               </section>
             ) : (
               <div className="student-class-members-list">
-                {members.map((member) => (
-                  <div className="student-class-member-row" key={member.id}>
-                    <div className="student-class-member-info">
-                      <div className="student-class-avatar avatar-student" aria-hidden="true">
-                        {member.fullName
-                          ? member.fullName.trim().charAt(0).toUpperCase()
-                          : 'H'}
+                {members.map((member) => {
+                  const memberInfo = getUserDisplayInfo(member, user)
+                  return (
+                    <div className="student-class-member-row" key={member.id}>
+                      <div className="student-class-member-info">
+                        <div className="student-class-avatar avatar-student" aria-hidden="true">
+                          {memberInfo.avatar ? (
+                            <img src={memberInfo.avatar} alt={memberInfo.fullName} />
+                          ) : (
+                            memberInfo.initial
+                          )}
+                        </div>
+                        <div className="student-class-member-text">
+                          <span className="student-class-member-name">{memberInfo.fullName}</span>
+                          <span className="student-class-member-email">{memberInfo.email}</span>
+                        </div>
                       </div>
-                      <div className="student-class-member-text">
-                        <span className="student-class-member-name">{member.fullName}</span>
-                        <span className="student-class-member-email">{member.email}</span>
-                      </div>
-                    </div>
 
-                    <div className="student-class-member-meta">
-                      <span>Tham gia: {formatDateTime(member.joinedAt)}</span>
-                      <span className="student-class-role-badge student-class-role-badge-student">
-                        Học viên
-                      </span>
+                      <div className="student-class-member-meta">
+                        <span>Tham gia: {formatDateTime(member.joinedAt)}</span>
+                        <span className="student-class-role-badge student-class-role-badge-student">
+                          Học viên
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>
