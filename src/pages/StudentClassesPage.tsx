@@ -22,9 +22,39 @@ export default function StudentClassesPage() {
   const [joinPassword, setJoinPassword] = useState('')
   const [joinBusy, setJoinBusy] = useState(false)
   const [joinError, setJoinError] = useState('')
+  const [, setTick] = useState(0)
 
   useEffect(() => {
     void loadClassrooms()
+
+    const onSync = () => {
+      setTick((t) => t + 1)
+      void loadClassrooms(true)
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        setTick((t) => t + 1)
+        void loadClassrooms(true)
+      }
+    }
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key.startsWith('online-exam.profile.') || e.key.startsWith('online-exam.avatar.') || e.key.startsWith('online-exam.avatar-removed.')) {
+        setTick((t) => t + 1)
+        void loadClassrooms(true)
+      }
+    }
+
+    window.addEventListener('focus', onSync)
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('online-exam:profile-updated', onSync)
+    window.addEventListener('storage', onStorage)
+
+    return () => {
+      window.removeEventListener('focus', onSync)
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('online-exam:profile-updated', onSync)
+      window.removeEventListener('storage', onStorage)
+    }
   }, [])
 
   useEffect(() => {
@@ -33,16 +63,16 @@ export default function StudentClassesPage() {
     return () => window.clearTimeout(timer)
   }, [notice])
 
-  async function loadClassrooms() {
-    setLoading(true)
+  async function loadClassrooms(silent = false) {
+    if (!silent) setLoading(true)
     setError('')
     try {
       const data = await classroomsApi.getJoined()
       setClassrooms(data)
     } catch (err) {
-      setError(getClassroomErrorMessage(err))
+      if (!silent) setError(getClassroomErrorMessage(err))
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -137,7 +167,7 @@ export default function StudentClassesPage() {
           <button
             type="button"
             className="button button-primary button-inline"
-            onClick={loadClassrooms}
+            onClick={() => void loadClassrooms()}
           >
             Thử lại
           </button>

@@ -41,10 +41,40 @@ export default function ManagerClassDetailPage() {
   const [memberToDelete, setMemberToDelete] = useState<ClassroomMember | null>(null)
   const [removingMember, setRemovingMember] = useState(false)
   const [removeMemberError, setRemoveMemberError] = useState('')
+  const [, setTick] = useState(0)
 
   useEffect(() => {
     if (!classId) return
     void loadClassDetails()
+
+    const onSync = () => {
+      setTick((t) => t + 1)
+      void loadClassDetails(true)
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        setTick((t) => t + 1)
+        void loadClassDetails(true)
+      }
+    }
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key.startsWith('online-exam.profile.') || e.key.startsWith('online-exam.avatar.') || e.key.startsWith('online-exam.avatar-removed.')) {
+        setTick((t) => t + 1)
+        void loadClassDetails(true)
+      }
+    }
+
+    window.addEventListener('focus', onSync)
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('online-exam:profile-updated', onSync)
+    window.addEventListener('storage', onStorage)
+
+    return () => {
+      window.removeEventListener('focus', onSync)
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('online-exam:profile-updated', onSync)
+      window.removeEventListener('storage', onStorage)
+    }
   }, [classId])
 
   useEffect(() => {
@@ -53,8 +83,8 @@ export default function ManagerClassDetailPage() {
     return () => window.clearTimeout(timer)
   }, [notice])
 
-  async function loadClassDetails() {
-    setLoading(true)
+  async function loadClassDetails(silent = false) {
+    if (!silent) setLoading(true)
     setError('')
     try {
       const [detailData, examsData, membersData] = await Promise.all([
@@ -66,9 +96,9 @@ export default function ManagerClassDetailPage() {
       setExams(examsData)
       setMembers(membersData)
     } catch (err) {
-      setError(getClassroomErrorMessage(err))
+      if (!silent) setError(getClassroomErrorMessage(err))
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
@@ -148,7 +178,7 @@ export default function ManagerClassDetailPage() {
           <button
             type="button"
             className="button button-primary button-inline"
-            onClick={loadClassDetails}
+            onClick={() => void loadClassDetails()}
           >
             Thử lại
           </button>

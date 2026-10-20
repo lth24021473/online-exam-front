@@ -60,7 +60,7 @@
 .student-class-teacher-avatar {
   width: 44px;
   height: 44px;
-  border-radius: 50%;
+  border-radius: 2px;
   border: 2px solid var(--border);
   background: #ffcc00;
   color: #1a1a1a;
@@ -70,6 +70,14 @@
   font-weight: 800;
   font-size: 18px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.student-class-teacher-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .student-class-teacher-info {
@@ -321,7 +329,7 @@
 
 .student-class-avatar.avatar-teacher {
   background: #ffcc00;
-  border-radius: 50%;
+  border-radius: 2px;
 }
 
 .student-class-avatar.avatar-student {

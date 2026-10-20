@@ -118,6 +118,9 @@ export function useProfileImage(userId: string, kind: 'avatar' | 'cover', initia
       }
       try {
         localStorage.setItem(storageKey, dataUrl)
+        if (kind === 'avatar') {
+          localStorage.removeItem(`online-exam.avatar-removed.${userId}`)
+        }
       } catch (storageFailure) {
         const isQuotaError = storageFailure instanceof DOMException &&
           ['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REACHED'].includes(storageFailure.name)
@@ -126,10 +129,20 @@ export function useProfileImage(userId: string, kind: 'avatar' | 'cover', initia
         }
       }
       setImage(dataUrl)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('online-exam:profile-updated', {
+          detail: { userId, kind, value: dataUrl }
+        }))
+      }
       try {
         const updatedUser = await authApi.updateProfile({ [kind]: dataUrl })
         if (updatedUser) {
           updateUser(updatedUser)
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('online-exam:profile-updated', {
+              detail: { userId, kind, user: updatedUser }
+            }))
+          }
         }
       } catch {
         // Background sync tolerance
@@ -149,10 +162,23 @@ export function useProfileImage(userId: string, kind: 'avatar' | 'cover', initia
     if (updating.current) return
     try {
       localStorage.removeItem(storageKey)
+      if (kind === 'avatar') {
+        localStorage.setItem(`online-exam.avatar-removed.${userId}`, String(Date.now()))
+      }
       setImage(null)
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('online-exam:profile-updated', {
+          detail: { userId, kind, value: null }
+        }))
+      }
       authApi.updateProfile({ [kind]: null }).then((updatedUser) => {
         if (updatedUser) {
           updateUser(updatedUser)
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('online-exam:profile-updated', {
+              detail: { userId, kind, user: updatedUser }
+            }))
+          }
         }
       }).catch(() => {
         // Sync in background

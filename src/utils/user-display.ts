@@ -31,38 +31,51 @@ export function getUserDisplayInfo(
   }
 
   const id = user.userId || user.id
-  let fullName = user.fullName?.trim() || 'Chưa cập nhật'
-  let avatar = user.avatar ?? null
+  const isMe = Boolean(currentUser && id && id === currentUser.id)
 
-  // If this target user matches the currently logged in user, prioritize local session
-  if (currentUser && id && id === currentUser.id) {
-    if (currentUser.fullName) {
-      fullName = currentUser.fullName.trim()
-    }
-    if (currentUser.avatar) {
-      avatar = currentUser.avatar
-    }
-  }
+  // 1. Full name resolution
+  let fullName = user.fullName?.trim() || ''
 
-  // Check localStorage profile and avatar overrides
   if (id) {
     try {
       const localProfile = readAccountProfile(id, fullName)
-      if (localProfile?.fullName) {
+      if (localProfile?.fullName?.trim()) {
         fullName = localProfile.fullName.trim()
       }
     } catch {
       // ignore
     }
+  }
 
+  if (isMe && currentUser?.fullName?.trim()) {
+    fullName = currentUser.fullName.trim()
+  }
+
+  if (!fullName) {
+    fullName = 'Chưa cập nhật'
+  }
+
+  // 2. Avatar resolution
+  let avatar = user.avatar ?? null
+
+  if (id) {
     try {
-      const localAvatar = localStorage.getItem(`online-exam.avatar.${id}`)
-      if (localAvatar) {
-        avatar = localAvatar
+      const isRemoved = localStorage.getItem(`online-exam.avatar-removed.${id}`)
+      if (isRemoved) {
+        avatar = null
+      } else {
+        const localAvatar = localStorage.getItem(`online-exam.avatar.${id}`)
+        if (localAvatar) {
+          avatar = localAvatar
+        }
       }
     } catch {
       // ignore
     }
+  }
+
+  if (isMe && currentUser?.avatar !== undefined) {
+    avatar = currentUser.avatar
   }
 
   const initial = fullName

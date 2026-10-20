@@ -29,6 +29,11 @@ function AccountProfileSession({ user, children }: { user: AuthUser | null, chil
     if (!user) throw new Error('Vui lòng đăng nhập để chỉnh sửa thông tin tài khoản.')
     const savedProfile = writeAccountProfile(user.id, draft)
     setProfile(savedProfile)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('online-exam:profile-updated', {
+        detail: { userId: user.id, profile: savedProfile }
+      }))
+    }
     authApi.updateProfile({
       fullName: savedProfile.fullName,
       workplace: savedProfile.workplace,
@@ -36,6 +41,11 @@ function AccountProfileSession({ user, children }: { user: AuthUser | null, chil
     }).then((updatedUser) => {
       if (updatedUser && updatedUser.fullName === savedProfile.fullName) {
         updateUser(updatedUser)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('online-exam:profile-updated', {
+            detail: { userId: user.id, user: updatedUser }
+          }))
+        }
       }
     }).catch(() => {
       // Background sync; keep local cache working seamlessly
