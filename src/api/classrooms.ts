@@ -18,6 +18,10 @@ export interface Classroom {
   manager?: ClassroomManager
   memberCount?: number
   examCount?: number
+  _count?: {
+    members?: number
+    exams?: number
+  }
   createdAt: string
   updatedAt: string
   joinedAt?: string
@@ -70,30 +74,38 @@ function extractList<T>(data: T[] | { items: T[] }): T[] {
   return []
 }
 
+function normalizeClassroom(c: Classroom): Classroom {
+  return {
+    ...c,
+    memberCount: c.memberCount ?? c._count?.members ?? 0,
+    examCount: c.examCount ?? c._count?.exams ?? 0,
+  }
+}
+
 export const classroomsApi = {
   async create(payload: CreateClassroomPayload): Promise<Classroom> {
     const { data } = await api.post<Classroom>('/classrooms', payload)
-    return data
+    return normalizeClassroom(data)
   },
 
   async getManaged(): Promise<Classroom[]> {
     const { data } = await api.get<Classroom[] | { items: Classroom[] }>('/classrooms/managed')
-    return extractList(data)
+    return extractList(data).map(normalizeClassroom)
   },
 
   async getJoined(): Promise<Classroom[]> {
     const { data } = await api.get<Classroom[] | { items: Classroom[] }>('/classrooms/joined')
-    return extractList(data)
+    return extractList(data).map(normalizeClassroom)
   },
 
   async getDetail(id: string): Promise<Classroom> {
     const { data } = await api.get<Classroom>(`/classrooms/${id}`)
-    return data
+    return normalizeClassroom(data)
   },
 
   async join(payload: JoinClassroomPayload): Promise<Classroom> {
     const { data } = await api.post<Classroom>('/classrooms/join', payload)
-    return data
+    return normalizeClassroom(data)
   },
 
   async getMembers(id: string): Promise<ClassroomMember[]> {
@@ -101,8 +113,8 @@ export const classroomsApi = {
     return extractList(data)
   },
 
-  async getExams(id: string): Promise<any[]> {
-    const { data } = await api.get<any[] | { items: any[] }>(`/classrooms/${id}/exams`)
+  async getExams(id: string): Promise<ClassroomExam[]> {
+    const { data } = await api.get<ClassroomExam[] | { items: ClassroomExam[] }>(`/classrooms/${id}/exams`)
     return extractList(data)
   },
 

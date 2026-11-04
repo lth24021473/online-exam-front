@@ -22,6 +22,8 @@ function normalizeMetadata(payload: ExamPayload): ExamPayload {
     ...(payload.closesAt ? { closesAt: payload.closesAt } : {}),
     ...(payload.maxAttempts && payload.maxAttempts > 1 ? { maxAttempts: payload.maxAttempts } : {}),
     ...(payload.classroomId ? { classroomId: payload.classroomId } : {}),
+    ...(payload.enableProctoring !== undefined ? { enableProctoring: payload.enableProctoring } : {}),
+    ...(payload.maxViolations ? { maxViolations: payload.maxViolations } : {}),
   }
 }
 
@@ -35,6 +37,8 @@ function metadata(exam: ManagerExam): ExamPayload {
     closesAt: exam.closesAt,
     maxAttempts: exam.maxAttempts,
     classroomId: exam.classroomId,
+    enableProctoring: exam.enableProctoring,
+    maxViolations: exam.maxViolations,
   })
 }
 function questionPayload(question: ManagerQuestion): QuestionPayload {

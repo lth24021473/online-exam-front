@@ -87,12 +87,12 @@ const sharedRoutes = [
   ['/profile', user.fullName],
   ['/profile?tab=edit', user.fullName],
   ['/settings', 'Cài đặt'],
-  ['/exams', 'Khám phá đề thi'],
+
   ['/exams/' + examId, exam.title],
 ]
 const studentRoutes = [
   ['/history', 'Lịch sử làm bài'],
-  ['/exams/' + examId + '/take', exam.title],
+
   ['/attempts/' + attemptId + '/result', 'Kết quả bài làm'],
 ]
 const managerRoutes = [
@@ -112,8 +112,8 @@ for (const role of ['STUDENT', 'EXAM_MANAGER', 'ADMIN'] as const) {
       await expect(page.getByRole('heading', { name: 'Xin chào, ' + user.fullName + '!', exact: true })).toBeVisible()
       const reference = await geometry(page)
       const expectedNavigation = role === 'STUDENT'
-        ? ['Trang chủ', 'Đề thi', 'Lịch sử', 'Tài khoản', 'Cài đặt']
-        : ['Trang chủ', 'Quản lý đề', ...(role === 'ADMIN' ? ['Quản trị'] : []), 'Tài khoản', 'Cài đặt']
+        ? ['Trang chủ', 'Lớp học', 'Lịch sử', 'Tài khoản', 'Cài đặt']
+        : ['Trang chủ', 'Quản lý đề', 'Lớp học', ...(role === 'ADMIN' ? ['Quản trị'] : []), 'Tài khoản', 'Cài đặt']
       expect(reference.navigation.map((link) => link.label)).toEqual(expectedNavigation)
       expect(reference.contentWidth).toBeLessThanOrEqual(reference.viewport)
       expect(reference.brand.x).toBeCloseTo(reference.main.x, 0)

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ArrowLeft, BookOpen, Clock3, ShieldCheck, Award } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { examsApi } from '../api/exams'
 import type { ExamInfo } from '../api/exams'
@@ -10,6 +10,7 @@ import { useAuth } from '../auth/useAuth'
 
 export default function ExamDetailPage() {
   const { examId = '' } = useParams()
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [data, setData] = useState<{ exam: ExamInfo | null; error: string } | null>(null)
   const [attemptInfo, setAttemptInfo] = useState<{ count: number; hasActive: boolean } | null>(null)
@@ -71,6 +72,7 @@ export default function ExamDetailPage() {
             {data.exam?.opensAt && <li>Thời gian mở đề: {new Date(data.exam.opensAt).toLocaleString('vi-VN')}</li>}
             {data.exam?.closesAt && <li>Thời gian đóng đề: {new Date(data.exam.closesAt).toLocaleString('vi-VN')}</li>}
             {attemptInfo !== null && <li>Lượt làm bài của bạn: {attemptInfo.count}/{maxAttempts}</li>}
+
           </ul>
         </div>
         <div className="exam-actions">
@@ -88,7 +90,46 @@ export default function ExamDetailPage() {
                 <Link className="button button-primary button-inline" to="/history">Xem kết quả & đáp án</Link>
               </div>
             ) : (
-              <Link className="button button-primary button-inline" to={`/exams/${examId}/take`}>Bắt đầu / Tiếp tục bài</Link>
+              <button
+                type="button"
+                className="button button-primary button-inline"
+                onClick={async () => {
+                  try {
+                    const doc = document as unknown as {
+                      fullscreenElement?: Element
+                      webkitFullscreenElement?: Element
+                      mozFullScreenElement?: Element
+                      msFullscreenElement?: Element
+                    }
+                    if (
+                      !doc.fullscreenElement &&
+                      !doc.webkitFullscreenElement &&
+                      !doc.mozFullScreenElement &&
+                      !doc.msFullscreenElement
+                    ) {
+                      const el = document.documentElement as HTMLElement & {
+                        webkitRequestFullscreen?: () => Promise<void>
+                        mozRequestFullScreen?: () => Promise<void>
+                        msRequestFullscreen?: () => Promise<void>
+                      }
+                      if (el.requestFullscreen) {
+                        await el.requestFullscreen()
+                      } else if (el.webkitRequestFullscreen) {
+                        await el.webkitRequestFullscreen()
+                      } else if (el.mozRequestFullScreen) {
+                        await el.mozRequestFullScreen()
+                      } else if (el.msRequestFullscreen) {
+                        await el.msRequestFullscreen()
+                      }
+                    }
+                  } catch {
+                    // Ignore fullscreen rejection if any
+                  }
+                  navigate(`/exams/${examId}/take`)
+                }}
+              >
+                Bắt đầu / Tiếp tục bài
+              </button>
             )
           ) : (
             <Link className="button button-primary button-inline" to={`/manage/exams/${examId}`}>Quản lý đề thi</Link>

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { classroomsApi, getClassroomErrorMessage } from '../api/classrooms'
 import type { Classroom } from '../api/classrooms'
 import { useAuth } from '../auth/useAuth'
+import { useTabSync } from '../hooks/useTabSync'
 import { getUserDisplayInfo } from '../utils/user-display'
 import './ManagerExams.css'
 import './StudentClassesPage.css'
@@ -22,39 +23,10 @@ export default function StudentClassesPage() {
   const [joinPassword, setJoinPassword] = useState('')
   const [joinBusy, setJoinBusy] = useState(false)
   const [joinError, setJoinError] = useState('')
-  const [, setTick] = useState(0)
+  useTabSync(loadClassrooms)
 
   useEffect(() => {
     void loadClassrooms()
-
-    const onSync = () => {
-      setTick((t) => t + 1)
-      void loadClassrooms(true)
-    }
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        setTick((t) => t + 1)
-        void loadClassrooms(true)
-      }
-    }
-    const onStorage = (e: StorageEvent) => {
-      if (!e.key || e.key.startsWith('online-exam.profile.') || e.key.startsWith('online-exam.avatar.') || e.key.startsWith('online-exam.avatar-removed.')) {
-        setTick((t) => t + 1)
-        void loadClassrooms(true)
-      }
-    }
-
-    window.addEventListener('focus', onSync)
-    document.addEventListener('visibilitychange', onVisibility)
-    window.addEventListener('online-exam:profile-updated', onSync)
-    window.addEventListener('storage', onStorage)
-
-    return () => {
-      window.removeEventListener('focus', onSync)
-      document.removeEventListener('visibilitychange', onVisibility)
-      window.removeEventListener('online-exam:profile-updated', onSync)
-      window.removeEventListener('storage', onStorage)
-    }
   }, [])
 
   useEffect(() => {
@@ -236,11 +208,11 @@ export default function StudentClassesPage() {
                 <div className="student-class-stats">
                   <span className="student-class-stat-item">
                     <Users size={15} aria-hidden="true" />
-                    {classroom.memberCount ?? 0} bạn học
+                    {classroom.memberCount ?? classroom._count?.members ?? 0} sinh viên
                   </span>
                   <span className="student-class-stat-item">
                     <FileText size={15} aria-hidden="true" />
-                    {classroom.examCount ?? 0} đề thi
+                    {classroom.examCount ?? classroom._count?.exams ?? 0} đề thi
                   </span>
                 </div>
 

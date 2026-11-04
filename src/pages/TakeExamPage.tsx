@@ -3,6 +3,8 @@ import { AlertCircle, ArrowLeft, CheckCircle2, Clock3, CloudUpload, LoaderCircle
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useExamAttempt } from '../attempts/useExamAttempt'
+import { useExamProctoring } from '../attempts/useExamProctoring'
+import ProctoringWarningModal from '../components/ProctoringWarningModal'
 
 function formatRemaining(milliseconds: number) {
   const seconds = Math.max(0, Math.ceil(milliseconds / 1000))
@@ -21,6 +23,39 @@ function readReviewMarks(key: string | null): string[] {
   }
 }
 
+function exitFullscreenHelper() {
+  try {
+    const doc = document as unknown as {
+      fullscreenElement?: Element
+      webkitFullscreenElement?: Element
+      mozFullScreenElement?: Element
+      msFullscreenElement?: Element
+      exitFullscreen?: () => Promise<void>
+      webkitExitFullscreen?: () => Promise<void>
+      mozCancelFullScreen?: () => Promise<void>
+      msExitFullscreen?: () => Promise<void>
+    }
+    if (
+      doc.fullscreenElement ||
+      doc.webkitFullscreenElement ||
+      doc.mozFullScreenElement ||
+      doc.msFullscreenElement
+    ) {
+      if (doc.exitFullscreen) {
+        void doc.exitFullscreen().catch(() => {})
+      } else if (doc.webkitExitFullscreen) {
+        void doc.webkitExitFullscreen().catch(() => {})
+      } else if (doc.mozCancelFullScreen) {
+        void doc.mozCancelFullScreen().catch(() => {})
+      } else if (doc.msExitFullscreen) {
+        void doc.msExitFullscreen().catch(() => {})
+      }
+    }
+  } catch {
+    // Ignore if not in fullscreen
+  }
+}
+
 function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }) {
   const { state, controller } = useExamAttempt(userId, examId)
   const navigate = useNavigate()
@@ -28,7 +63,29 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
   const [reviewOverrides, setReviewOverrides] = useState<Record<string, string[]>>({})
   const dialogRef = useRef<HTMLElement>(null)
   const dialogTriggerRef = useRef<HTMLElement | null>(null)
-  const reviewStorageKey = state.session ? `online-exam.review:${userId}:${state.session.attempt.id}` : null
+
+  const session = state.session
+  const remaining = session ? Date.parse(session.attempt.deadlineAt) - state.now : 0
+  const expired = remaining <= 0
+  const isTakingActive =
+    state.phase === 'ready' &&
+    !expired &&
+    !state.submissionPending
+
+  const proctoring = useExamProctoring({
+    attemptId: session?.attempt.id,
+    enabled: session?.exam.enableProctoring ?? true,
+    maxViolations: session?.exam.maxViolations ?? 3,
+    initialViolationCount: session?.attempt.violationCount ?? 0,
+    isActive: isTakingActive,
+    onTerminate: () => {
+      exitFullscreenHelper()
+      document.body.classList.remove('exam-taking-fullscreen')
+      void controller.forceSubmit()
+    },
+  })
+
+  const reviewStorageKey = session ? `online-exam.review:${userId}:${session.attempt.id}` : null
   const storedReviewMarks = useMemo(() => readReviewMarks(reviewStorageKey), [reviewStorageKey])
   const reviewMarks = reviewStorageKey ? reviewOverrides[reviewStorageKey] ?? storedReviewMarks : []
 
@@ -46,9 +103,68 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
   }
 
   useEffect(() => {
-    if (state.completedId) navigate(`/attempts/${state.completedId}/result`, { replace: true })
-    else if (state.phase === 'cancelled') navigate('/history', { replace: true, state: { cancelled: true } })
+    if (state.completedId) {
+      exitFullscreenHelper()
+      document.body.classList.remove('exam-taking-fullscreen')
+      navigate(`/attempts/${state.completedId}/result`, { replace: true })
+    } else if (state.phase === 'cancelled') {
+      exitFullscreenHelper()
+      document.body.classList.remove('exam-taking-fullscreen')
+      navigate('/history', { replace: true, state: { cancelled: true } })
+    }
   }, [state.completedId, state.phase, navigate])
+
+  // Automatically exit fullscreen if phase becomes completed or cancelled
+  useEffect(() => {
+    if (state.phase === 'completed' || state.phase === 'cancelled') {
+      exitFullscreenHelper()
+      document.body.classList.remove('exam-taking-fullscreen')
+    }
+  }, [state.phase])
+
+  // Cleanup on unmount (e.g. user leaves page or browser navigates)
+  useEffect(() => {
+    return () => {
+      exitFullscreenHelper()
+      document.body.classList.remove('exam-taking-fullscreen')
+    }
+  }, [])
+
+  // Sync fullscreen state with document.body class to toggle global navbar
+  useEffect(() => {
+    if (proctoring.isFullscreen || proctoring.isWarningOpen) {
+      document.body.classList.add('exam-taking-fullscreen')
+    } else {
+      document.body.classList.remove('exam-taking-fullscreen')
+    }
+    return () => {
+      document.body.classList.remove('exam-taking-fullscreen')
+    }
+  }, [proctoring.isFullscreen, proctoring.isWarningOpen])
+
+  // Automatically request fullscreen when taking exam becomes active
+  useEffect(() => {
+    if (isTakingActive && !proctoring.isFullscreen) {
+      void proctoring.enterFullscreen()
+    }
+  }, [isTakingActive, proctoring.isFullscreen, proctoring.enterFullscreen])
+
+  // Browser security: if fullscreen is ever inactive while taking exam,
+  // any interaction (click or keypress) immediately requests fullscreen.
+  useEffect(() => {
+    if (!isTakingActive || proctoring.isFullscreen) return
+    const tryFullscreenOnGesture = () => {
+      if (!document.fullscreenElement) {
+        void proctoring.enterFullscreen()
+      }
+    }
+    window.addEventListener('click', tryFullscreenOnGesture)
+    window.addEventListener('keydown', tryFullscreenOnGesture)
+    return () => {
+      window.removeEventListener('click', tryFullscreenOnGesture)
+      window.removeEventListener('keydown', tryFullscreenOnGesture)
+    }
+  }, [isTakingActive, proctoring.isFullscreen, proctoring.enterFullscreen])
 
   useEffect(() => {
     if (!state.dialog) return
@@ -76,15 +192,12 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
   if (state.phase === 'error') {
     return <section className="exam-panel exam-empty"><AlertCircle size={32} aria-hidden="true" /><h1>Chưa thể mở bài thi</h1><p role="alert">{state.error}</p><div className="exam-actions">{state.allowRetry && <button className="button button-primary button-inline" onClick={controller.retryLoad}>Thử lại</button>}<Link className="button button-inline exam-button-secondary" to="/exams">Về danh sách đề</Link></div></section>
   }
-  if (!state.session || state.phase === 'completed' || state.phase === 'cancelled') {
+  if (!session || state.phase === 'completed' || state.phase === 'cancelled') {
     return <section className="exam-panel exam-loading" role="status">Đang chuyển trang…</section>
   }
 
-  const { session } = state
   const questions = [...session.questions].sort((a, b) => a.position - b.position)
   const current = questions[Math.min(questionIndex, Math.max(questions.length - 1, 0))]
-  const remaining = Date.parse(session.attempt.deadlineAt) - state.now
-  const expired = remaining <= 0
   const locked = Boolean(state.busy || state.submissionPending || expired)
   const answeredCount = questions.filter((question) => state.selections[question.id] !== undefined).length
   const saving = Object.values(state.saveStatuses).some((status) => status === 'saving')
@@ -93,9 +206,22 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
 
   return (
     <div className="exam-page exam-taking">
-      <Link className="exam-back" to={`/exams/${examId}`}><ArrowLeft size={17} aria-hidden="true" /> Chi tiết đề thi</Link>
+      {!proctoring.isFullscreen && (
+        <Link className="exam-back" to={`/exams/${examId}`}><ArrowLeft size={17} aria-hidden="true" /> Chi tiết đề thi</Link>
+      )}
       <section className="exam-panel exam-taking-header">
-        <div className="exam-heading"><span className="exam-eyebrow">{session.resumed ? 'Tiếp tục lượt thi' : 'Bài thi của bạn'}</span><h1>{session.exam.title}</h1><p className="exam-muted">{session.exam.durationMinutes} phút · {session.attempt.totalQuestions} câu hỏi</p></div>
+        <div className="exam-heading">
+          <span className="exam-eyebrow">{session.resumed ? 'Tiếp tục lượt thi' : 'Bài thi của bạn'}</span>
+          <h1>{session.exam.title}</h1>
+          <p className="exam-muted">{session.exam.durationMinutes} phút · {session.attempt.totalQuestions} câu hỏi</p>
+        </div>
+        {(session.exam.enableProctoring ?? true) && proctoring.violationCount > 0 && (
+          <div className="exam-proctoring-indicator">
+            <span className="exam-proctoring-violations-tag">
+              Vi phạm: {proctoring.violationCount}/{session.exam.maxViolations ?? 3}
+            </span>
+          </div>
+        )}
       </section>
       {!state.online && <div className="exam-alert exam-alert-warning" role="status"><WifiOff size={20} aria-hidden="true" /><span>{expired || state.submissionPending ? 'Mất kết nối. Bài sẽ được kiểm tra và nộp khi kết nối trở lại.' : 'Mất kết nối. Bạn vẫn có thể chọn đáp án; bài sẽ tự lưu khi kết nối trở lại.'}</span></div>}
       {!state.cacheAvailable && state.pendingCount > 0 && <div className="exam-alert exam-alert-warning" role="status">Thiết bị không cho phép lưu tạm đáp án. Hãy giữ trang này mở cho đến khi đáp án được lưu.</div>}
@@ -145,7 +271,24 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
           </div>
         </aside>
       </div>
-      {state.dialog && <div className="exam-dialog-backdrop"><section ref={dialogRef} className="exam-panel exam-confirm" role="dialog" aria-modal="true" aria-labelledby="attempt-confirm-title"><h2 id="attempt-confirm-title">{state.dialog === 'submit' ? 'Nộp bài thi?' : 'Hủy lượt thi?'}</h2><p>{state.dialog === 'submit' ? `Bạn đã chọn ${answeredCount}/${questions.length} câu. Sau khi nộp, bạn không thể đổi đáp án.` : 'Lượt thi này sẽ kết thúc và không được chấm điểm. Bạn có thể bắt đầu lượt mới sau đó.'}</p>{state.dialog === 'submit' && state.pendingCount > 0 && <p className="exam-muted">Hệ thống sẽ lưu {state.pendingCount} đáp án đang chờ trước khi nộp.</p>}<div className="exam-actions"><button autoFocus className="button button-inline exam-button-secondary" onClick={controller.closeDialog} disabled={Boolean(state.busy)}>Tiếp tục làm bài</button><button className="button button-primary button-inline" onClick={state.dialog === 'submit' ? controller.confirmSubmit : controller.confirmCancel} disabled={Boolean(state.busy)}>{state.busy === 'cancel' ? 'Đang hủy bài…' : state.dialog === 'submit' ? 'Xác nhận nộp bài' : 'Xác nhận hủy bài'}</button></div></section></div>}
+      {state.dialog && <div className="exam-dialog-backdrop"><section ref={dialogRef} className="exam-panel exam-confirm" role="dialog" aria-modal="true" aria-labelledby="attempt-confirm-title"><h2 id="attempt-confirm-title">{state.dialog === 'submit' ? 'Nộp bài thi?' : 'Hủy lượt thi?'}</h2><p>{state.dialog === 'submit' ? `Bạn đã chọn ${answeredCount}/${questions.length} câu. Sau khi nộp, bạn không thể đổi đáp án.` : 'Lượt thi này sẽ kết thúc và không được chấm điểm. Bạn có thể bắt đầu lượt mới sau đó.'}</p>{state.dialog === 'submit' && state.pendingCount > 0 && <p className="exam-muted">Hệ thống sẽ lưu {state.pendingCount} đáp án đang chờ trước khi nộp.</p>}<div className="exam-actions"><button autoFocus className="button button-inline exam-button-secondary" onClick={controller.closeDialog} disabled={Boolean(state.busy)}>Tiếp tục làm bài</button><button className="button button-primary button-inline" onClick={async () => { exitFullscreenHelper(); document.body.classList.remove('exam-taking-fullscreen'); if (state.dialog === 'submit') { await controller.confirmSubmit() } else { await controller.confirmCancel() } }} disabled={Boolean(state.busy)}>{state.busy === 'cancel' ? 'Đang hủy bài…' : state.dialog === 'submit' ? 'Xác nhận nộp bài' : 'Xác nhận hủy bài'}</button></div></section></div>}
+      <ProctoringWarningModal
+        isOpen={proctoring.isWarningOpen}
+        isTerminated={proctoring.isTerminated}
+        violation={proctoring.latestViolation}
+        maxViolations={session.exam.maxViolations ?? 3}
+        onDismiss={async () => {
+          if (proctoring.isTerminated) {
+            exitFullscreenHelper()
+            document.body.classList.remove('exam-taking-fullscreen')
+            void controller.forceSubmit()
+          } else {
+            // First re-enter fullscreen directly from the user's click gesture
+            await proctoring.enterFullscreen()
+            proctoring.dismissWarning()
+          }
+        }}
+      />
     </div>
   )
 }

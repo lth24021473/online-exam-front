@@ -500,7 +500,7 @@ test('dark mode works with the keyboard, persists and follows account and home n
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(17, 24, 39)')
   await expect(page.locator('.app-header')).toHaveCSS('background-color', 'rgb(31, 41, 55)')
-  await expect(page.locator('.dashboard-hint')).toHaveCSS('background-color', 'rgb(38, 50, 68)')
+  await expect(page.locator('.dashboard-hero')).toBeVisible()
   await capturePreview(page, 'test-results/preview-dashboard-dark-desktop.png')
   await page.getByRole('link', { name: 'Tài khoản', exact: true }).click()
   await expect(page.getByRole('tab', { name: 'Cài đặt', exact: true })).toHaveCount(0)

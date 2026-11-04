@@ -10,7 +10,7 @@
   text-transform: uppercase;
   color: var(--text-primary);
 }
-.manager-form input:not([type='radio']), .manager-form textarea, .manager-toolbar input, .manager-toolbar select, .manager-results-filter select {
+.manager-form input:not([type='radio']):not([type='checkbox']), .manager-form textarea, .manager-toolbar input, .manager-toolbar select, .manager-results-filter select {
   box-sizing: border-box;
   min-width: 0;
   width: 100%;

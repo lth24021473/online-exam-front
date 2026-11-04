@@ -225,6 +225,10 @@
   border-radius: 2px;
   color: var(--text-secondary);
   background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
 .password-toggle:hover { color: var(--accent); }
 
@@ -361,6 +365,42 @@
   background: var(--surface);
 }
 :root[data-theme='dark'] .app-layout { background: var(--page-background); }
+
+/* Hide global navigation, footer and back links during fullscreen exam taking */
+:fullscreen .app-header,
+:fullscreen .app-footer,
+:fullscreen .skip-link,
+:fullscreen .exam-back {
+  display: none !important;
+}
+
+:-webkit-full-screen .app-header,
+:-webkit-full-screen .app-footer,
+:-webkit-full-screen .skip-link,
+:-webkit-full-screen .exam-back {
+  display: none !important;
+}
+
+:-moz-full-screen .app-header,
+:-moz-full-screen .app-footer,
+:-moz-full-screen .skip-link,
+:-moz-full-screen .exam-back {
+  display: none !important;
+}
+
+body.exam-taking-fullscreen .app-header,
+body.exam-taking-fullscreen .app-footer,
+body.exam-taking-fullscreen .skip-link,
+body.exam-taking-fullscreen .exam-back {
+  display: none !important;
+}
+
+:fullscreen .app-main,
+:-webkit-full-screen .app-main,
+:-moz-full-screen .app-main,
+body.exam-taking-fullscreen .app-main {
+  padding-top: 16px !important;
+}
 
 .app-header {
   min-height: 76px;

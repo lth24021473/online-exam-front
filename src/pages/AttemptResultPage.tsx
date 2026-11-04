@@ -5,6 +5,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { attemptsApi, getAttemptErrorMessage } from '../api/attempts'
 import { clearAttemptCache, readAttemptCache } from '../attempts/attempt-storage'
 import { useAuth } from '../auth/useAuth'
+import { formatDate } from '../utils/date'
 
 type Result = Awaited<ReturnType<typeof attemptsApi.result>>
 type ResultState =
@@ -12,13 +13,6 @@ type ResultState =
   | { key: string; kind: 'error'; message: string; canContinue: boolean }
 
 const numberFormat = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 })
-
-function formatDate(value: string | null | undefined): string {
-  if (!value || !Number.isFinite(Date.parse(value))) return '—'
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'short', timeStyle: 'short',
-  }).format(new Date(value))
-}
 
 function getResultError(error: unknown): { message: string; canContinue: boolean } {
   if (axios.isAxiosError<{ message?: string }>(error)) {

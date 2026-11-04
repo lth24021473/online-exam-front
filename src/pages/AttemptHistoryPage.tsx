@@ -6,6 +6,7 @@ import { attemptsApi, getAttemptErrorMessage } from '../api/attempts'
 import { clearAttemptCache, readAttemptCache } from '../attempts/attempt-storage'
 import { useAuth } from '../auth/useAuth'
 import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
+import { formatDate } from '../utils/date'
 
 type HistoryResponse = Awaited<ReturnType<typeof attemptsApi.history>>
 type AttemptItem = HistoryResponse['items'][number]
@@ -15,11 +16,6 @@ type HistoryState =
   | { key: string; kind: 'error'; message: string }
 
 const numberFormat = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 })
-
-function formatDate(value: string | null | undefined): string {
-  if (!value || !Number.isFinite(Date.parse(value))) return '—'
-  return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value))
-}
 
 function hasExpired(item: AttemptItem, now: number) {
   const deadline = Date.parse(item.deadlineAt)

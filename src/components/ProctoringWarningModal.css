@@ -1,0 +1,142 @@
+.proctoring-dialog-backdrop {
+  z-index: 1050;
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+.proctoring-modal {
+  max-width: 520px;
+  width: 90%;
+  border: 3px solid #1a1a1a;
+  box-shadow: 6px 6px 0 #1a1a1a;
+  padding: 24px;
+  background: #ffffff;
+}
+
+.proctoring-header-warning {
+  margin-bottom: 16px;
+}
+
+.proctoring-badge-warning {
+  display: inline-block;
+  background: #ffcc00;
+  color: #1a1a1a;
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border: 2px solid #1a1a1a;
+  box-shadow: 2px 2px 0 #1a1a1a;
+  margin-bottom: 8px;
+}
+
+.proctoring-header-danger {
+  margin-bottom: 16px;
+}
+
+.proctoring-badge-danger {
+  display: inline-block;
+  background: #ff4d4f;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border: 2px solid #1a1a1a;
+  box-shadow: 2px 2px 0 #1a1a1a;
+  margin-bottom: 8px;
+}
+
+.proctoring-modal h2 {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #1a1a1a;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.proctoring-violation-detail {
+  background: #fffbe6;
+  border: 2px solid #1a1a1a;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+}
+
+.proctoring-violation-label {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #d4380d;
+  margin: 4px 0 0;
+}
+
+.proctoring-violation-sub {
+  font-size: 0.9rem;
+  color: #595959;
+  margin: 4px 0 0;
+}
+
+.proctoring-counter-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f5f5f5;
+  border: 2px solid #1a1a1a;
+  padding: 10px 16px;
+  margin-bottom: 14px;
+  font-size: 1rem;
+}
+
+.proctoring-counter-box strong {
+  font-size: 1.25rem;
+  color: #cf1322;
+}
+
+.proctoring-warning-notice {
+  font-weight: 600;
+  color: #cf1322;
+  font-size: 0.92rem;
+  margin-bottom: 20px;
+}
+
+.proctoring-message {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #1a1a1a;
+  margin-bottom: 20px;
+}
+
+.proctoring-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+
+.exam-proctoring-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.exam-proctoring-badge {
+  background: #52c41a;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border: 2px solid #1a1a1a;
+  box-shadow: 2px 2px 0 #1a1a1a;
+  text-transform: uppercase;
+}
+
+.exam-proctoring-violations-tag {
+  background: #ff4d4f;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border: 2px solid #1a1a1a;
+  box-shadow: 2px 2px 0 #1a1a1a;
+}
+
+
+

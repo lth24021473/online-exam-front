@@ -8,12 +8,10 @@ import { expireSession, getAccessToken } from '../api/axios'
 import { useAuth } from '../auth/useAuth'
 import { accountRoles, roleLabels } from '../auth/roles'
 import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
+import { formatDate } from '../utils/date'
 import './AdminUsersPage.css'
 
 type LoadState<T> = { key: string; value: T } | { key: string; error: string }
-const formatDate = (date: string) => Number.isFinite(Date.parse(date))
-  ? new Date(date).toLocaleString('vi-VN')
-  : '—'
 
 function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBusy }: {
   id: string

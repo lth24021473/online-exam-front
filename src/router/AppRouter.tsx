@@ -22,7 +22,7 @@ import StudentClassesPage from '../pages/StudentClassesPage'
 import StudentClassDetailPage from '../pages/StudentClassDetailPage'
 import AdminRoute from './AdminRoute'
 import AdminUsersPage from '../pages/AdminUsersPage'
-import ExamsPage from '../pages/ExamsPage'
+
 import ExamDetailPage from '../pages/ExamDetailPage'
 import TakeExamPage from '../pages/TakeExamPage'
 import AttemptResultPage from '../pages/AttemptResultPage'
@@ -44,7 +44,7 @@ export default function AppRouter() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="exams" element={<ExamsPage />} />
+          <Route path="exams" element={<Navigate to="/dashboard" replace />} />
           <Route path="exams/:examId" element={<ExamDetailPage />} />
           <Route path="classes" element={<StudentClassesPage />} />
           <Route path="classes/:classId" element={<StudentClassDetailPage />} />

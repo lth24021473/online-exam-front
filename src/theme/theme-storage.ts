@@ -1,6 +1,6 @@
 export type Theme = 'light' | 'dark'
 
-export const THEME_STORAGE_KEY = 'online-exam.theme'
+const THEME_STORAGE_KEY = 'online-exam.theme'
 
 export function getStoredTheme(): Theme {
   try {

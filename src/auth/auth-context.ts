@@ -1,7 +1,7 @@
 import { createContext } from 'react'
 import type { AuthResponse, AuthUser } from '../api/auth.api'
 
-export interface AuthContextValue {
+interface AuthContextValue {
   user: AuthUser | null
   loading: boolean
   isAuthenticated: boolean

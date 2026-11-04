@@ -31,6 +31,8 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
   const [opensAt, setOpensAt] = useState('')
   const [closesAt, setClosesAt] = useState('')
   const [maxAttempts, setMaxAttempts] = useState('1')
+  const [enableProctoring, setEnableProctoring] = useState(true)
+  const [maxViolations, setMaxViolations] = useState('3')
   const [questions, setQuestions] = useState<DraftQuestion[]>([{
     id: 1, content: '', correctOptionId: null,
     options: [2, 3, 4, 5].map((id) => ({ id, content: '' })),
@@ -104,6 +106,10 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
     if (!Number.isSafeInteger(attempts) || attempts < 1) {
       fail(`${formId}-max-attempts`, 'Số lần làm tối đa phải là số nguyên từ 1.'); return
     }
+    const violationsNum = Number(maxViolations)
+    if (enableProctoring && (!Number.isSafeInteger(violationsNum) || violationsNum < 1)) {
+      fail(`${formId}-max-violations`, 'Số lần vi phạm tối đa phải là số nguyên từ 1.'); return
+    }
     if (opensAt && closesAt && new Date(opensAt).getTime() >= new Date(closesAt).getTime()) {
       fail(`${formId}-opens-at`, 'Thời gian mở đề phải trước thời gian đóng đề.'); return
     }
@@ -140,6 +146,11 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
       ...(opensAt ? { opensAt: new Date(opensAt).toISOString() } : {}),
       ...(closesAt ? { closesAt: new Date(closesAt).toISOString() } : {}),
       ...(attempts > 1 ? { maxAttempts: attempts } : {}),
+      ...(enableProctoring
+        ? (violationsNum && violationsNum !== 3
+            ? { enableProctoring: true, maxViolations: violationsNum }
+            : {})
+        : { enableProctoring: false }),
     }
     setConfirmation({
       exam: examData,
@@ -195,6 +206,54 @@ export default function ManagerCreateExamForm({ busy, error, creationBlocked = f
             <div className="manager-create-field"><label htmlFor={`${formId}-max-attempts`}>Số lần làm tối đa</label><input id={`${formId}-max-attempts`} type="number" min={1} step={1} required value={maxAttempts} {...fieldError(`${formId}-max-attempts`)} onChange={(event) => { setMaxAttempts(event.target.value); setValidation(null) }} /></div>
             <div className="manager-create-field"><label htmlFor={`${formId}-opens-at`}>Thời gian mở đề tự động (tùy chọn)</label><input id={`${formId}-opens-at`} type="datetime-local" value={opensAt} {...fieldError(`${formId}-opens-at`)} onChange={(event) => { setOpensAt(event.target.value); setValidation(null) }} /></div>
             <div className="manager-create-field"><label htmlFor={`${formId}-closes-at`}>Thời gian đóng đề tự động (tùy chọn)</label><input id={`${formId}-closes-at`} type="datetime-local" value={closesAt} {...fieldError(`${formId}-closes-at`)} onChange={(event) => { setClosesAt(event.target.value); setValidation(null) }} /></div>
+          </div>
+
+          <div className="manager-create-proctoring-card">
+            <div className="manager-create-proctoring-header">
+              <h3>Giám sát thi & Chống gian lận</h3>
+              <span className="manager-create-proctoring-badge">Heuristic</span>
+            </div>
+
+            <div className="manager-create-checkbox-field">
+              <label htmlFor={`${formId}-enable-proctoring`} className="manager-create-checkbox-label">
+                <input
+                  id={`${formId}-enable-proctoring`}
+                  type="checkbox"
+                  checked={enableProctoring}
+                  onChange={(e) => setEnableProctoring(e.target.checked)}
+                />
+                <span>Bật giám sát thi thông minh (Heuristic Proctoring)</span>
+              </label>
+              <p className="manager-create-checkbox-hint">
+                Tự động phát hiện học sinh chuyển tab, thoát toàn màn hình, mở phím tắt DevTools (F12) và thao tác sao chép/dán.
+              </p>
+            </div>
+
+            {enableProctoring && (
+              <div className="manager-create-proctoring-options">
+
+                <div className="manager-create-field">
+                  <label htmlFor={`${formId}-max-violations`}>
+                    Số lần vi phạm tối đa trước khi thu bài
+                  </label>
+                  <input
+                    id={`${formId}-max-violations`}
+                    className="manager-create-max-violations-input"
+                    type="number"
+                    min={1}
+                    max={10}
+                    step={1}
+                    required
+                    value={maxViolations}
+                    {...fieldError(`${formId}-max-violations`)}
+                    onChange={(event) => { setMaxViolations(event.target.value); setValidation(null) }}
+                  />
+                  <p className="exam-muted" style={{ margin: '4px 0 0', fontSize: '13px' }}>
+                    Khi học sinh vi phạm quá số lần này, hệ thống sẽ tự động khóa bài thi và thu bài ngay lập tức.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
