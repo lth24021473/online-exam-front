@@ -1,6 +1,6 @@
 import { readAccountProfile } from '../profile/account-profile-storage'
 
-export interface UserDisplayInfo {
+interface UserDisplayInfo {
   fullName: string
   email: string
   avatar: string | null

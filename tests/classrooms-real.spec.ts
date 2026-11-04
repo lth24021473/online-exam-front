@@ -144,10 +144,9 @@ test.describe('Classrooms E2E Multi-role Integration Tests', () => {
       // -----------------------------------------------------------------------
       // BƯỚC 5: Cô lập phạm vi hiển thị (Strict Scope Isolation)
       // -----------------------------------------------------------------------
-      // Học sinh vào trang /exams công khai: Đề thi lớp KHÔNG hiển thị
-      await student.goto('/exams')
-      await expect(student.getByRole('heading', { name: 'Khám phá đề thi', exact: true })).toBeVisible()
-      await expect(student.getByText('Đang tải danh sách đề thi…')).toBeHidden()
+      // Học sinh vào trang chủ công khai: Đề thi lớp KHÔNG hiển thị trong Đề thi tự do
+      await student.goto('/dashboard')
+      await expect(student.getByRole('heading', { name: 'Đề thi tự do', exact: true })).toBeVisible()
       await expect(student.getByRole('heading', { name: fixture.examTitle })).toHaveCount(0)
 
       // Giáo viên vào trang /manage/exams chung: Đề thi lớp KHÔNG hiển thị

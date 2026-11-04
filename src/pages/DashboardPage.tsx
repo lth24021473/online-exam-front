@@ -1,7 +1,8 @@
-import { ArrowRight, Clock3, RefreshCw, Sparkles } from 'lucide-react'
+import { ArrowRight, BookOpen, Clock3, HelpCircle } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
+import axios from 'axios'
 import { attemptsApi, getAttemptErrorMessage } from '../api/attempts'
 import type { AttemptHistoryItem, AttemptHistoryResponse, AttemptStatus } from '../api/attempts'
 import type { AuthUser } from '../api/auth.api'
@@ -9,9 +10,9 @@ import { getApiErrorMessage } from '../api/axios'
 import { examsApi } from '../api/exams'
 import type { ExamCatalog, ExamInfo } from '../api/exams'
 import { useAuth } from '../auth/useAuth'
-import { PortalIllustration, StudyBookIllustration } from '../components/DashboardIllustrations'
 import { useAccountProfile } from '../profile/useAccountProfile'
 import { useProfileAvatar } from '../profile/useProfileAvatar'
+import { formatDate } from '../utils/date'
 import './DashboardPage.css'
 
 const attemptTabs = [
@@ -35,45 +36,62 @@ type DashboardState =
   | { key: string; kind: 'error'; message: string }
 
 const numberFormat = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 })
-const dateFormat = new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
-
-function formatDate(value: string | null): string {
-  return value && Number.isFinite(Date.parse(value)) ? dateFormat.format(new Date(value)) : '—'
-}
 
 function AttemptCard({ item, now }: { item: AttemptHistoryItem; now: number }) {
   const deadline = Date.parse(item.deadlineAt)
   const expired = item.expired || (Number.isFinite(deadline) && deadline <= now)
   const status = item.status === 'SUBMITTED' ? 'Hoàn thành' : item.status === 'CANCELLED' ? 'Đã hủy' : expired ? 'Đã hết giờ' : 'Đang làm'
-  return <article className="dashboard-card">
-    <div className="dashboard-card-top">
-      <span className={`dashboard-card-status dashboard-status-${item.status.toLowerCase()}`}>{status}</span>
-      <span className="dashboard-card-meta">{item.totalQuestions} câu hỏi</span>
-    </div>
-    <h2>{item.exam.title}</h2>
-    <p className="dashboard-card-meta">
-      {item.status === 'SUBMITTED' ? `Nộp bài: ${formatDate(item.submittedAt)}` : item.status === 'CANCELLED' ? `Hủy bài: ${formatDate(item.cancelledAt)}` : `Hạn nộp: ${formatDate(item.deadlineAt)}`}
-    </p>
-    {item.status === 'SUBMITTED' && <p className="dashboard-card-score" aria-label="Điểm bài thi"><strong>{typeof item.score === 'number' ? numberFormat.format(item.score) : '—'}</strong> / {numberFormat.format(item.maxScore)}</p>}
-    {item.status === 'CANCELLED' && <p className="dashboard-card-meta">Không chấm điểm</p>}
-    {item.status === 'IN_PROGRESS' && !expired && <Link className="dashboard-card-link" to={`/exams/${item.exam.id}/take`}>Tiếp tục làm bài <ArrowRight size={17} aria-hidden="true" /></Link>}
-    {(item.status === 'SUBMITTED' || (item.status === 'IN_PROGRESS' && expired)) && <Link className="dashboard-card-link" to={`/attempts/${item.id}/result`} state={{ examId: item.exam.id }}>Xem kết quả <ArrowRight size={17} aria-hidden="true" /></Link>}
-    {item.status === 'CANCELLED' && <Link className="dashboard-card-link" to={`/exams/${item.exam.id}`}>Xem đề thi <ArrowRight size={17} aria-hidden="true" /></Link>}
-  </article>
+  return (
+    <article className="dashboard-card">
+      <div className="dashboard-card-top">
+        <span className={`dashboard-card-status dashboard-status-${item.status.toLowerCase()}`}>{status}</span>
+        <span className="dashboard-card-meta">{item.totalQuestions} câu hỏi</span>
+      </div>
+      <h2>{item.exam.title}</h2>
+      <p className="dashboard-card-meta">
+        {item.status === 'SUBMITTED' ? `Nộp bài: ${formatDate(item.submittedAt)}` : item.status === 'CANCELLED' ? `Hủy bài: ${formatDate(item.cancelledAt)}` : `Hạn nộp: ${formatDate(item.deadlineAt)}`}
+      </p>
+      {item.status === 'SUBMITTED' && (
+        <p className="dashboard-card-score" aria-label="Điểm bài thi">
+          <strong>{typeof item.score === 'number' ? numberFormat.format(item.score) : '—'}</strong> / {numberFormat.format(item.maxScore)}
+        </p>
+      )}
+      {item.status === 'CANCELLED' && <p className="dashboard-card-meta">Không chấm điểm</p>}
+      {item.status === 'IN_PROGRESS' && !expired && (
+        <Link className="dashboard-card-link" to={`/exams/${item.exam.id}/take`}>
+          Tiếp tục làm bài <ArrowRight size={17} aria-hidden="true" />
+        </Link>
+      )}
+      {(item.status === 'SUBMITTED' || (item.status === 'IN_PROGRESS' && expired)) && (
+        <Link className="dashboard-card-link" to={`/attempts/${item.id}/result`} state={{ examId: item.exam.id }}>
+          Xem kết quả <ArrowRight size={17} aria-hidden="true" />
+        </Link>
+      )}
+      {item.status === 'CANCELLED' && (
+        <Link className="dashboard-card-link" to={`/exams/${item.exam.id}`}>
+          Xem đề thi <ArrowRight size={17} aria-hidden="true" />
+        </Link>
+      )}
+    </article>
+  )
 }
 
 function ExamCard({ item }: { item: ExamInfo }) {
   const status = item.status === 'PUBLISHED' ? 'Đang mở' : item.status === 'DRAFT' ? 'Bản nháp' : 'Đã đóng'
-  return <article className="dashboard-card">
-    <div className="dashboard-card-top">
-      <span className={`dashboard-card-status dashboard-status-${item.status.toLowerCase()}`}>{status}</span>
-      <span className="dashboard-card-meta"><Clock3 size={15} aria-hidden="true" /> {item.durationMinutes} phút</span>
-    </div>
-    <h2>{item.title}</h2>
-    {item.description && <p className="dashboard-card-meta">{item.description}</p>}
-    {item.totalQuestions !== null && <p className="dashboard-card-meta">{item.totalQuestions} câu hỏi</p>}
-    <Link className="dashboard-card-link" to={`/exams/${item.id}`}>Xem đề thi <ArrowRight size={17} aria-hidden="true" /></Link>
-  </article>
+  return (
+    <article className="dashboard-card">
+      <div className="dashboard-card-top">
+        <span className={`dashboard-card-status dashboard-status-${item.status.toLowerCase()}`}>{status}</span>
+        <span className="dashboard-card-meta"><Clock3 size={15} aria-hidden="true" /> {item.durationMinutes} phút</span>
+      </div>
+      <h2>{item.title}</h2>
+      {item.description && <p className="dashboard-card-meta">{item.description}</p>}
+      {item.totalQuestions !== null && <p className="dashboard-card-meta">{item.totalQuestions} câu hỏi</p>}
+      <Link className="dashboard-card-link" to={`/exams/${item.id}`}>
+        Xem đề thi <ArrowRight size={17} aria-hidden="true" />
+      </Link>
+    </article>
+  )
 }
 
 function DashboardContent({ user }: { user: AuthUser }) {
@@ -94,7 +112,11 @@ function DashboardContent({ user }: { user: AuthUser }) {
   const current = state?.key === key ? state : null
   const data = current?.kind === 'ready' ? current.data : null
   const initials = profile.fullName.trim().split(/\s+/).slice(-2).map((part) => part[0]).join('').toLocaleUpperCase('vi-VN')
-  const catalogLink = isStudent ? 'Khám phá đề thi' : 'Xem danh sách đề thi'
+
+  // Free public exams state for students
+  const [freeExams, setFreeExams] = useState<ExamInfo[]>([])
+  const [loadingFreeExams, setLoadingFreeExams] = useState(false)
+  const [freeExamsSearch, setFreeExamsSearch] = useState('')
 
   useEffect(() => {
     if (!isStudent) return
@@ -109,6 +131,33 @@ function DashboardContent({ user }: { user: AuthUser }) {
       document.removeEventListener('visibilitychange', updateVisibleClock)
     }
   }, [isStudent])
+
+  // Load public free exams for students
+  useEffect(() => {
+    if (!isStudent) return
+    const token = typeof window !== 'undefined' ? localStorage.getItem('online-exam.access-token') : null
+    if (token === 'mock-profile-token') return
+
+    let active = true
+    const controller = new AbortController()
+    setLoadingFreeExams(true)
+    examsApi.list(1, controller.signal, 'STUDENT', 'PUBLISHED')
+      .then((catalog) => {
+        if (active) {
+          setFreeExams(catalog.items || [])
+          setLoadingFreeExams(false)
+        }
+      })
+      .catch((err: unknown) => {
+        if (active && !axios.isCancel(err)) {
+          setLoadingFreeExams(false)
+        }
+      })
+    return () => {
+      active = false
+      controller.abort()
+    }
+  }, [isStudent, revision])
 
   useEffect(() => {
     let active = true
@@ -149,62 +198,178 @@ function DashboardContent({ user }: { user: AuthUser }) {
     tabRefs.current[next]?.focus()
   }
 
-  return <div className="dashboard-page">
-    <section className="dashboard-hero" aria-labelledby="dashboard-greeting">
-      <div className="dashboard-hero-copy">
-        <div className="dashboard-welcome">
-          <div className="dashboard-avatar">
-            {avatar ? <img src={avatar} alt={`Ảnh đại diện của ${profile.fullName}`} /> : <span role="img" aria-label={`Ảnh đại diện của ${profile.fullName}`}>{initials || 'HV'}</span>}
-          </div>
-          <div className="dashboard-greeting">
-            <h1 id="dashboard-greeting">Xin chào, {profile.fullName}!</h1>
-            <p>Chào mừng bạn trở lại với Tracnghiem.com.</p>
-          </div>
-        </div>
-        <div className="dashboard-hint">
-          <Sparkles size={23} aria-hidden="true" />
-          <div><p>{isStudent ? 'Bắt đầu một đề thi mới hoặc tiếp tục bài đang làm. Theo dõi kết quả của bạn ngay tại đây.' : 'Theo dõi các đề thi đang mở, bản nháp và đề đã đóng. Chọn một đề để xem thông tin chi tiết.'}</p><Link to="/exams">{catalogLink} <ArrowRight size={16} aria-hidden="true" /></Link></div>
-        </div>
-      </div>
-      <div className="dashboard-hero-art"><PortalIllustration /></div>
-    </section>
 
-    <div className="dashboard-tabs" role="tablist" aria-label={isStudent ? 'Bài làm của bạn' : 'Trạng thái đề thi'}>
-      {tabs.map((tab, index) => <button
-        key={tab.status}
-        id={`${tabId}-tab-${index}`}
-        role="tab"
-        type="button"
-        aria-selected={index === selectedIndex}
-        aria-controls={`${tabId}-panel`}
-        tabIndex={index === selectedIndex ? 0 : -1}
-        ref={(element) => { tabRefs.current[index] = element }}
-        onClick={() => selectTab(index)}
-        onKeyDown={(event) => handleTabKey(event, index)}
-      >{tab.label}</button>)}
+  const filteredFreeExams = freeExams.filter((exam) => {
+    if (!freeExamsSearch.trim()) return true
+    const q = freeExamsSearch.toLowerCase()
+    return exam.title.toLowerCase().includes(q) || (exam.description && exam.description.toLowerCase().includes(q))
+  })
+
+  return (
+    <div className="dashboard-page">
+      {/* 1. Hero Section Bauhaus */}
+      <section className="dashboard-hero" aria-labelledby="dashboard-greeting">
+        <div className="dashboard-hero-copy">
+          <div className="dashboard-welcome">
+            <div className="dashboard-avatar">
+              {avatar ? <img src={avatar} alt={`Ảnh đại diện của ${profile.fullName}`} /> : <span role="img" aria-label={`Ảnh đại diện của ${profile.fullName}`}>{initials || 'HV'}</span>}
+            </div>
+            <div className="dashboard-greeting">
+              <h1 id="dashboard-greeting">Xin chào, {profile.fullName}!</h1>
+              <p>Chào mừng bạn trở lại với Tracnghiem.com.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. Public Free Exams Section (Only for Student) */}
+      {isStudent && (
+        <section id="free-exams" className="dashboard-section dashboard-public-exams-section" aria-label="Đề thi tự do">
+          <div className="dashboard-section-header">
+            <div className="dashboard-section-title-group">
+              <span className="dashboard-section-tag" aria-hidden="true" />
+              <h2>Đề thi tự do</h2>
+              <span className="dashboard-section-count">{filteredFreeExams.length} đề thi</span>
+            </div>
+            <div className="dashboard-section-search">
+              <input
+                type="search"
+                placeholder="Tìm đề thi tự do..."
+                value={freeExamsSearch}
+                onChange={(e) => setFreeExamsSearch(e.target.value)}
+                aria-label="Tìm kiếm đề thi tự do"
+              />
+            </div>
+          </div>
+
+          {loadingFreeExams ? (
+            <p className="exam-panel" role="status">Đang tải đề thi tự do…</p>
+          ) : filteredFreeExams.length === 0 ? (
+            <div className="exam-panel dashboard-free-empty">
+              <BookOpen size={36} aria-hidden="true" />
+              <h3>{freeExamsSearch ? 'Không tìm thấy đề thi phù hợp' : 'Hiện chưa có đề thi tự do nào'}</h3>
+              <p>{freeExamsSearch ? 'Hãy thử tìm kiếm với từ khóa khác.' : 'Các đề thi tự do cộng đồng sẽ xuất hiện tại đây để bạn làm bài bất kỳ lúc nào.'}</p>
+            </div>
+          ) : (
+            <div className="dashboard-free-grid">
+              {filteredFreeExams.map((exam) => (
+                <article className="dashboard-free-card" key={exam.id}>
+                  <div className="dashboard-free-card-header">
+                    <span className="exam-badge exam-badge-published">Đang mở</span>
+                    <span className="dashboard-free-card-stat">
+                      <Clock3 size={15} aria-hidden="true" /> {exam.durationMinutes} phút
+                    </span>
+                  </div>
+
+                  <h3>{exam.title}</h3>
+                  <p className="dashboard-free-card-desc">
+                    {exam.description || 'Đề thi trắc nghiệm rèn luyện và củng cố kiến thức.'}
+                  </p>
+
+                  <div className="dashboard-free-card-footer">
+                    <span className="dashboard-free-card-questions">
+                      <HelpCircle size={15} aria-hidden="true" />
+                      {exam.totalQuestions !== null ? `${exam.totalQuestions} câu hỏi` : '—'}
+                    </span>
+                    <Link to={`/exams/${exam.id}`} className="button button-primary button-inline">
+                      Xem đề thi
+                    </Link>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* 3. My Attempts Tabs Section (or Exam Management for Manager) */}
+      <section className="dashboard-section dashboard-history-section" aria-label={isStudent ? 'Bài làm của bạn' : 'Trạng thái đề thi'}>
+        <div className="dashboard-section-header">
+          <div className="dashboard-section-title-group">
+            <span className="dashboard-section-tag" aria-hidden="true" />
+            <h2>{isStudent ? 'Bài làm của bạn' : 'Trạng thái đề thi'}</h2>
+          </div>
+        </div>
+
+        <div className="dashboard-tabs" role="tablist" aria-label={isStudent ? 'Bài làm của bạn' : 'Trạng thái đề thi'}>
+          {tabs.map((tab, index) => (
+            <button
+              key={tab.status}
+              id={`${tabId}-tab-${index}`}
+              role="tab"
+              type="button"
+              aria-selected={index === selectedIndex}
+              aria-controls={`${tabId}-panel`}
+              tabIndex={index === selectedIndex ? 0 : -1}
+              ref={(element) => { tabRefs.current[index] = element }}
+              onClick={() => selectTab(index)}
+              onKeyDown={(event) => handleTabKey(event, index)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <section
+          className="dashboard-content"
+          id={`${tabId}-panel`}
+          role="tabpanel"
+          aria-labelledby={`${tabId}-tab-${selectedIndex}`}
+          aria-busy={!current}
+        >
+          {!current && (
+            <div className="dashboard-panel-status" role="status">
+              <span className="loading-spinner" aria-hidden="true" />
+              <p>{isStudent ? 'Đang tải bài làm…' : 'Đang tải đề thi…'}</p>
+            </div>
+          )}
+
+          {current?.kind === 'error' && (
+            <div className="dashboard-panel-status">
+              <p className="form-error" role="alert">{current.message}</p>
+              <button
+                type="button"
+                className="button button-primary button-inline"
+                onClick={() => setRevision((value) => value + 1)}
+              >
+                Thử lại
+              </button>
+            </div>
+          )}
+
+
+          {data && data.items.length > 0 && (
+            <>
+              <div className="dashboard-cards">
+                {data.kind === 'attempts'
+                  ? data.items.map((item) => <AttemptCard item={item} now={now} key={item.id} />)
+                  : data.items.map((item) => <ExamCard item={item} key={item.id} />)}
+              </div>
+              <nav className="dashboard-pagination" aria-label={isStudent ? 'Phân trang bài làm' : 'Phân trang đề thi'}>
+                <button
+                  type="button"
+                  className="button button-secondary button-inline"
+                  disabled={page <= 1}
+                  onClick={() => setPage((value) => value - 1)}
+                >
+                  Trang trước
+                </button>
+                <span>Trang {data.meta.page} / {Math.max(1, data.meta.totalPages)}</span>
+                <button
+                  type="button"
+                  className="button button-secondary button-inline"
+                  disabled={page >= data.meta.totalPages}
+                  onClick={() => setPage((value) => value + 1)}
+                >
+                  Trang sau
+                </button>
+              </nav>
+            </>
+          )}
+        </section>
+      </section>
     </div>
-
-    <section className="dashboard-content" id={`${tabId}-panel`} role="tabpanel" aria-labelledby={`${tabId}-tab-${selectedIndex}`} aria-busy={!current}>
-      {!current && <div className="dashboard-panel-status" role="status"><span className="loading-spinner" aria-hidden="true" /><p>{isStudent ? 'Đang tải bài làm…' : 'Đang tải đề thi…'}</p></div>}
-      {current?.kind === 'error' && <div className="dashboard-panel-status"><p className="form-error" role="alert">{current.message}</p><button type="button" className="button button-primary button-inline" onClick={() => setRevision((value) => value + 1)}><RefreshCw size={17} aria-hidden="true" /> Thử lại</button></div>}
-      {data && data.items.length === 0 && <div className="dashboard-empty">
-        <StudyBookIllustration />
-        <h2>{selectedTab.emptyTitle}</h2>
-        <p>{selectedTab.emptyDescription}</p>
-        <Link className="dashboard-card-link" to="/exams">{catalogLink} <ArrowRight size={17} aria-hidden="true" /></Link>
-      </div>}
-      {data && data.items.length > 0 && <>
-        <div className="dashboard-cards">
-          {data.kind === 'attempts' ? data.items.map((item) => <AttemptCard item={item} now={now} key={item.id} />) : data.items.map((item) => <ExamCard item={item} key={item.id} />)}
-        </div>
-        <nav className="dashboard-pagination" aria-label={isStudent ? 'Phân trang bài làm' : 'Phân trang đề thi'}>
-          <button type="button" className="button button-secondary button-inline" disabled={page <= 1} onClick={() => setPage((value) => value - 1)}>Trang trước</button>
-          <span>Trang {data.meta.page} / {Math.max(1, data.meta.totalPages)}</span>
-          <button type="button" className="button button-secondary button-inline" disabled={page >= data.meta.totalPages} onClick={() => setPage((value) => value + 1)}>Trang sau</button>
-        </nav>
-      </>}
-    </section>
-  </div>
+  )
 }
 
 export default function DashboardPage() {

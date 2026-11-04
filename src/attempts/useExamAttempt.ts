@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useSyncExternalStore } from 'react'
 import axios from 'axios'
-import { attemptsApi } from '../api/attempts'
+import { attemptsApi, getAttemptErrorMessage } from '../api/attempts'
 import type { AttemptResult, AttemptSession } from '../api/attempts'
-import { getApiErrorMessage } from '../api/axios'
 import { clearAttemptCache, readAttemptCache, writeAttemptCache } from './attempt-storage'
 import type { CachedAttempt } from './attempt-storage'
 
@@ -56,22 +55,7 @@ function isNetworkError(error: unknown) {
 }
 
 function attemptError(error: unknown) {
-  const messages: Record<string, string> = {
-    'Exam not found': 'Không tìm thấy đề thi hoặc đề chưa được mở.',
-    'Exam is closed': 'Đề thi đã đóng. Bạn hãy chọn đề khác.',
-    'Exam has no questions': 'Đề thi chưa có câu hỏi.',
-    'Attempt not found': 'Không tìm thấy lượt thi này trong tài khoản của bạn.',
-    'Time is over for this attempt': 'Đã hết thời gian làm bài.',
-    'Attempt is no longer in progress': 'Lượt thi này đã kết thúc.',
-    'Attempt is no longer active': 'Lượt thi này đã kết thúc hoặc đã hết giờ.',
-    'Cancelled attempts cannot be submitted': 'Lượt thi này đã được hủy.',
-    'Cancelled attempts have no graded result': 'Lượt thi này đã được hủy.',
-    'Only in-progress attempts can be cancelled': 'Chỉ có thể hủy bài đang làm.',
-    'Attempt was already submitted or cancelled': 'Lượt thi này đã được nộp hoặc hủy.',
-    'Selected option does not exist': 'Đáp án không còn hợp lệ. Vui lòng tải lại bài.',
-    'Attempt changed concurrently. Please retry the operation': 'Bài đang được cập nhật ở một yêu cầu khác. Bạn hãy thử lại.',
-  }
-  return messages[responseMessage(error)] ?? getApiErrorMessage(error)
+  return getAttemptErrorMessage(error)
 }
 
 /** One queue per mounted attempt keeps rapid answer changes in their chosen order. */
@@ -335,6 +319,7 @@ class AttemptController {
   closeDialog = () => { if (!this.state.busy) this.update({ dialog: null }) }
   confirmSubmit = () => { void this.submit(false) }
   retrySubmit = () => { void this.submit(true) }
+  forceSubmit = () => { void this.submit(true) }
 
   private submit(deadlineOrRecovery: boolean) {
     if (this.submission) return this.submission

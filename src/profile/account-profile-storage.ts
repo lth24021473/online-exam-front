@@ -6,7 +6,7 @@ export interface AccountProfile {
 
 const storagePrefix = 'online-exam.profile.'
 
-export function normalizeAccountProfile(draft: AccountProfile): AccountProfile {
+function normalizeAccountProfile(draft: AccountProfile): AccountProfile {
   if (typeof draft.fullName !== 'string' || typeof draft.workplace !== 'string' || typeof draft.currentResidence !== 'string') {
     throw new Error('Thông tin tài khoản không hợp lệ. Vui lòng kiểm tra và thử lại.')
   }
@@ -23,7 +23,7 @@ export function normalizeAccountProfile(draft: AccountProfile): AccountProfile {
   return { fullName, workplace, currentResidence }
 }
 
-export function recordProfileSync(userId: string, timestamp: number | string = Date.now()) {
+function recordProfileSync(userId: string, timestamp: number | string = Date.now()) {
   try {
     const time = typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime()
     if (time > 0) {

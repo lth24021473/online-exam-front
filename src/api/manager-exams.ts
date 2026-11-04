@@ -1,7 +1,7 @@
 import axios from 'axios'
 import api, { getApiErrorMessage } from './axios'
 import type { ExamInfo } from './exams'
-import type { AttemptStatus } from './attempts'
+import type { AttemptStatus, AttemptViolation } from './attempts'
 
 export type ExamStatus = ExamInfo['status']
 export const examStatusLabels = { DRAFT: 'Bản nháp', PUBLISHED: 'Đang mở', CLOSED: 'Đã đóng' }
@@ -19,11 +19,16 @@ export interface ExamPayload {
   closesAt?: string | null
   maxAttempts?: number
   classroomId?: string | null
+  enableProctoring?: boolean
+  maxViolations?: number
 }
 export interface QuestionPayload { content: string; position: number; options: string[]; correctOptionIndex: number }
 export interface ExamStudentResult {
   id: string; status: AttemptStatus; startedAt: string; deadlineAt: string; submittedAt: string | null; cancelledAt: string | null
   score: number | null; totalQuestions: number; correctCount: number | null; incorrectCount: number | null
+  violationCount?: number
+  terminatedReason?: string | null
+  violations?: AttemptViolation[]
   user: { id: string; fullName: string; email: string }
 }
 export interface LeaderboardItem {
@@ -38,7 +43,14 @@ export interface LeaderboardItem {
   submittedAt: string | null
 }
 export interface ManagerResults {
-  exam: { id: string; title: string; status: ExamStatus; durationMinutes: number }
+  exam: {
+    id: string
+    title: string
+    status: ExamStatus
+    durationMinutes: number
+    enableProctoring?: boolean
+    maxViolations?: number
+  }
   data: ExamStudentResult[]
   leaderboard?: LeaderboardItem[]
   meta: { page: number; limit: number; total: number; totalPages: number }

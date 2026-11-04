@@ -2,44 +2,156 @@ import api, { getApiErrorMessage } from './axios'
 import axios from 'axios'
 
 export type AttemptStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'CANCELLED'
+
+export type ViolationType =
+  | 'TAB_SWITCH'
+  | 'FULLSCREEN_EXIT'
+  | 'DEVTOOLS_OPEN'
+  | 'CLIPBOARD_ACTION'
+  | 'MULTIPLE_FACES'
+  | 'NO_FACE_DETECTED'
+
+export interface AttemptViolation {
+  id: string
+  attemptId: string
+  type: ViolationType
+  detail: string | null
+  createdAt: string
+}
+
+export interface RecordViolationResponse {
+  violation: AttemptViolation
+  violationCount: number
+  maxViolations: number
+  terminated: boolean
+  submitted: boolean
+  result: AttemptResult | null
+}
+
 export interface AttemptQuestion { id: string; content: string; position: number; options: string[] }
+
 export interface AttemptSession {
   resumed: boolean
-  attempt: { id: string; examId: string; status: AttemptStatus; startedAt: string; deadlineAt: string; totalQuestions: number }
-  exam: { id: string; title: string; instructions: string | null; durationMinutes: number }
+  attempt: {
+    id: string
+    examId: string
+    status: AttemptStatus
+    startedAt: string
+    deadlineAt: string
+    totalQuestions: number
+    violationCount?: number
+    terminatedReason?: string | null
+  }
+  exam: {
+    id: string
+    title: string
+    instructions: string | null
+    durationMinutes: number
+    enableProctoring?: boolean
+    maxViolations?: number
+  }
   questions: AttemptQuestion[]
   answers: { questionId: string; selectedOptionIndex: number }[]
 }
+
 export interface AttemptResult {
-  attempt: { id: string; examId: string; examTitle: string; status: AttemptStatus; startedAt: string; deadlineAt: string; submittedAt: string }
-  summary: { score: number; maxScore: number; totalQuestions: number; correctCount: number; incorrectCount: number; unansweredCount: number }
-  questions: (AttemptQuestion & { selectedOptionIndex: number | null; correctOptionIndex: number | null; isCorrect: boolean })[]
+  attempt: {
+    id: string
+    examId: string
+    examTitle: string
+    status: AttemptStatus
+    startedAt: string
+    deadlineAt: string
+    submittedAt: string
+  }
+  summary: {
+    score: number
+    maxScore: number
+    totalQuestions: number
+    correctCount: number
+    incorrectCount: number
+    unansweredCount: number
+    violationCount?: number
+    terminatedReason?: string | null
+  }
+  questions: (AttemptQuestion & {
+    selectedOptionIndex: number | null
+    correctOptionIndex: number | null
+    isCorrect: boolean
+  })[]
 }
+
 export interface AttemptHistoryItem {
-  id: string; status: AttemptStatus; startedAt: string; deadlineAt: string
-  submittedAt: string | null; cancelledAt: string | null; score: number | null
-  totalQuestions: number; correctCount: number | null; incorrectCount: number | null
-  exam: { id: string; title: string }; maxScore: number; expired: boolean
+  id: string
+  status: AttemptStatus
+  startedAt: string
+  deadlineAt: string
+  submittedAt: string | null
+  cancelledAt: string | null
+  score: number | null
+  totalQuestions: number
+  correctCount: number | null
+  incorrectCount: number | null
+  exam: { id: string; title: string }
+  maxScore: number
+  expired: boolean
 }
+
 export interface AttemptHistoryResponse {
   items: AttemptHistoryItem[]
   meta: { page: number; limit: number; total: number; totalPages: number }
 }
+
 export const attemptsApi = {
-  async start(examId: string): Promise<AttemptSession> { return (await api.post<AttemptSession>(`/exams/${examId}/attempts`)).data },
-  async saveAnswer(attemptId: string, questionId: string, selectedOptionIndex: number) {
-    return (await api.put<{ questionId: string; selectedOptionIndex: number; savedAt: string }>(`/attempts/${attemptId}/answers/${questionId}`, { selectedOptionIndex })).data
+  async start(examId: string): Promise<AttemptSession> {
+    return (await api.post<AttemptSession>(`/exams/${examId}/attempts`)).data
   },
-  async submit(id: string): Promise<AttemptResult> { return (await api.post<AttemptResult>(`/attempts/${id}/submit`)).data },
-  async result(id: string, signal?: AbortSignal): Promise<AttemptResult> { return (await api.get<AttemptResult>(`/attempts/${id}/result`, { signal })).data },
-  async cancel(id: string): Promise<void> { await api.delete(`/attempts/${id}`) },
-  async history(params: { page?: number; limit?: number; examId?: string; status?: AttemptStatus } = {}, signal?: AbortSignal): Promise<AttemptHistoryResponse> {
+  async saveAnswer(attemptId: string, questionId: string, selectedOptionIndex: number) {
+    return (await api.put<{ questionId: string; selectedOptionIndex: number; savedAt: string }>(
+      `/attempts/${attemptId}/answers/${questionId}`,
+      { selectedOptionIndex },
+    )).data
+  },
+  async submit(id: string): Promise<AttemptResult> {
+    return (await api.post<AttemptResult>(`/attempts/${id}/submit`)).data
+  },
+  async result(id: string, signal?: AbortSignal): Promise<AttemptResult> {
+    return (await api.get<AttemptResult>(`/attempts/${id}/result`, { signal })).data
+  },
+  async cancel(id: string): Promise<void> {
+    await api.delete(`/attempts/${id}`)
+  },
+  async history(
+    params: { page?: number; limit?: number; examId?: string; status?: AttemptStatus } = {},
+    signal?: AbortSignal,
+  ): Promise<AttemptHistoryResponse> {
     return (await api.get<AttemptHistoryResponse>('/attempts', { params, signal })).data
+  },
+  async recordViolation(
+    attemptId: string,
+    type: ViolationType,
+    detail?: string,
+  ): Promise<RecordViolationResponse> {
+    return (await api.post<RecordViolationResponse>(`/attempts/${attemptId}/violations`, {
+      type,
+      detail,
+    })).data
+  },
+  async getViolations(
+    attemptId: string,
+    signal?: AbortSignal,
+  ): Promise<{ attemptId: string; violations: AttemptViolation[] }> {
+    return (await api.get<{ attemptId: string; violations: AttemptViolation[] }>(
+      `/attempts/${attemptId}/violations`,
+      { signal },
+    )).data
   },
 }
 
 export function getAttemptErrorMessage(error: unknown): string {
-  if (axios.isAxiosError<{ message?: string }>(error)) {
+  if (axios.isAxiosError<{ message?: string | string[] }>(error)) {
+    const rawMessage = error.response?.data?.message
+    const message = Array.isArray(rawMessage) ? rawMessage.join(' ') : rawMessage
     const messages: Record<string, string> = {
       'Exam not found': 'Không tìm thấy đề thi này.',
       'Exam is closed': 'Đề thi đã đóng.',
@@ -53,14 +165,15 @@ export function getAttemptErrorMessage(error: unknown): string {
       'Cancelled attempts have no graded result': 'Bài làm đã được hủy nên không có điểm.',
       'Cancelled attempts cannot be submitted': 'Bài làm đã được hủy và không thể nộp.',
       'Attempt is no longer in progress': 'Bài làm đã kết thúc. Hãy kiểm tra lịch sử.',
+      'Attempt is no longer active': 'Lượt thi này đã kết thúc hoặc đã hết giờ.',
       'Time is over for this attempt': 'Thời gian làm bài đã hết.',
       'Only in-progress attempts can be cancelled': 'Chỉ có thể hủy bài đang làm.',
       'Attempt was already submitted or cancelled': 'Bài làm đã được nộp hoặc hủy.',
       'Question not found in exam': 'Câu hỏi không thuộc đề thi này.',
       'Selected option does not exist': 'Đáp án không hợp lệ. Hãy tải lại bài.',
       'Time is over': 'Thời gian làm bài đã hết.',
+      'Attempt changed concurrently. Please retry the operation': 'Bài đang được cập nhật ở một yêu cầu khác. Bạn hãy thử lại.',
     }
-    const message = error.response?.data?.message
     if (message && messages[message]) return messages[message]
     if (error.response?.status === 404) return 'Không tìm thấy đề thi hoặc bài làm của bạn.'
     if (error.response?.status === 409) return 'Bài làm đã thay đổi hoặc hết thời gian. Hãy kiểm tra lại lịch sử.'

@@ -7,6 +7,8 @@ export interface ExamInfo {
   durationMinutes: number; totalQuestions: number | null; status: 'DRAFT' | 'PUBLISHED' | 'CLOSED'
   opensAt?: string | null; closesAt?: string | null; maxAttempts?: number
   classroomId?: string | null
+  enableProctoring?: boolean
+  maxViolations?: number
 }
 export type Exam = ExamInfo
 export type ExamDetail = ExamInfo

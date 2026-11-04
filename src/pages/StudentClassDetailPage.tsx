@@ -5,21 +5,11 @@ import { classroomsApi, getClassroomErrorMessage } from '../api/classrooms'
 import type { Classroom, ClassroomExam, ClassroomMember } from '../api/classrooms'
 import { examStatusLabels } from '../api/manager-exams'
 import { useAuth } from '../auth/useAuth'
+import { useTabSync } from '../hooks/useTabSync'
+import { formatDateTime } from '../utils/date'
 import { getUserDisplayInfo } from '../utils/user-display'
 import './ManagerExams.css'
 import './StudentClassDetailPage.css'
-
-function formatDateTime(value?: string | null): string {
-  if (!value) return ''
-  try {
-    return new Intl.DateTimeFormat('vi-VN', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-    }).format(new Date(value))
-  } catch {
-    return value
-  }
-}
 
 export default function StudentClassDetailPage() {
   const { user } = useAuth()
@@ -32,40 +22,10 @@ export default function StudentClassDetailPage() {
   const [error, setError] = useState('')
 
   const [activeTab, setActiveTab] = useState<'exams' | 'members'>('exams')
-  const [, setTick] = useState(0)
+  useTabSync(loadClassDetails)
 
   useEffect(() => {
-    if (!classId) return
-    void loadClassDetails()
-
-    const onSync = () => {
-      setTick((t) => t + 1)
-      void loadClassDetails(true)
-    }
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        setTick((t) => t + 1)
-        void loadClassDetails(true)
-      }
-    }
-    const onStorage = (e: StorageEvent) => {
-      if (!e.key || e.key.startsWith('online-exam.profile.') || e.key.startsWith('online-exam.avatar.') || e.key.startsWith('online-exam.avatar-removed.')) {
-        setTick((t) => t + 1)
-        void loadClassDetails(true)
-      }
-    }
-
-    window.addEventListener('focus', onSync)
-    document.addEventListener('visibilitychange', onVisibility)
-    window.addEventListener('online-exam:profile-updated', onSync)
-    window.addEventListener('storage', onStorage)
-
-    return () => {
-      window.removeEventListener('focus', onSync)
-      document.removeEventListener('visibilitychange', onVisibility)
-      window.removeEventListener('online-exam:profile-updated', onSync)
-      window.removeEventListener('storage', onStorage)
-    }
+    if (classId) void loadClassDetails()
   }, [classId])
 
   async function loadClassDetails(silent = false) {

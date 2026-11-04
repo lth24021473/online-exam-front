@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Eye, EyeOff } from 'lucide-react'
 
 interface PasswordFieldProps {
   id: string
@@ -17,7 +16,7 @@ export default function PasswordField({ id, label, autoComplete, minLength = 6 }
         autoComplete={autoComplete} minLength={minLength} required />
       <button className="password-toggle" type="button" onClick={() => setVisible(!visible)}
         aria-label={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} aria-pressed={visible}>
-        {visible ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}
+        {visible ? 'Ẩn' : 'Hiện'}
       </button>
     </div>
   )

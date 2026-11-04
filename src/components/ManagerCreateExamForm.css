@@ -22,3 +22,89 @@
   .manager-create-remove { padding-left: 0; padding-right: 0; font-size: 13px; }
   .manager-create-footer > .button { width: 100%; justify-content: center; }
 }
+
+
+.manager-create-proctoring-card {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  box-shadow: 4px 4px 0px 0px var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.manager-create-proctoring-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.manager-create-proctoring-header h3 {
+  margin: 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.manager-create-proctoring-badge {
+  background: #ffcc00;
+  color: #1a1a1a;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border: 1px solid #1a1a1a;
+  box-shadow: 1px 1px 0px #1a1a1a;
+  text-transform: uppercase;
+}
+
+.manager-create-checkbox-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.manager-create-checkbox-label {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  cursor: pointer;
+  text-transform: none !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+}
+
+.manager-create-checkbox-label input[type='checkbox'] {
+  width: 20px !important;
+  height: 20px !important;
+  margin: 0 !important;
+  cursor: pointer;
+  accent-color: #1a1a1a;
+  flex-shrink: 0;
+}
+
+.manager-create-checkbox-hint {
+  margin: 0 0 0 30px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.manager-create-proctoring-options {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-left: 18px;
+  border-left: 3px solid #ffcc00;
+  margin-top: 4px;
+}
+
+.manager-create-max-violations-input {
+  max-width: 160px;
+}

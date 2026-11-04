@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, KeyboardEvent, SubmitEvent } from 'react'
-import { BookOpen, BriefcaseBusiness, CalendarDays, Camera, Check, ClipboardList, Mail, MapPin, ShieldCheck, UsersRound } from 'lucide-react'
+import { BookOpen, BriefcaseBusiness, CalendarDays, Check, ClipboardList, Mail, MapPin, ShieldCheck, UsersRound } from 'lucide-react'
 import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import type { AuthUser } from '../api/auth.api'
 import { useAuth } from '../auth/useAuth'
@@ -132,7 +132,7 @@ function ProfileContent({ user }: { user: AuthUser }) {
             <Avatar avatar={avatar} fullName={fullName} />
             <button className="account-avatar-camera" type="button" aria-label="Đổi ảnh đại diện"
               disabled={saving} onClick={() => fileInput.current?.click()}>
-              <Camera size={23} aria-hidden="true" />
+              Đổi ảnh
             </button>
           </div>
           <div className="account-name">

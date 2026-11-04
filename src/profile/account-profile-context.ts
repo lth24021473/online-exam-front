@@ -1,7 +1,7 @@
 import { createContext } from 'react'
 import type { AccountProfile } from './account-profile-storage'
 
-export interface AccountProfileContextValue {
+interface AccountProfileContextValue {
   profile: AccountProfile
   saveProfile: (draft: AccountProfile) => AccountProfile
 }

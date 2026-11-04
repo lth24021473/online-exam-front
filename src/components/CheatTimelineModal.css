@@ -1,0 +1,260 @@
+.cheat-timeline-backdrop {
+  z-index: 1040;
+  background-color: rgba(0, 0, 0, 0.75);
+}
+
+.cheat-timeline-modal {
+  max-width: 650px;
+  width: 92%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  border: 3px solid #1a1a1a;
+  box-shadow: 6px 6px 0 #1a1a1a;
+  padding: 24px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.cheat-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #1a1a1a;
+  padding-bottom: 12px;
+}
+
+.cheat-timeline-header h2 {
+  font-size: 1.3rem;
+  font-weight: 900;
+  margin: 6px 0 2px;
+  color: #1a1a1a;
+}
+
+.cheat-timeline-student {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #555555;
+}
+
+.cheat-timeline-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+  background: #f7f7f7;
+  border: 2px solid #1a1a1a;
+  padding: 12px;
+}
+
+.cheat-timeline-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cheat-timeline-summary span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #666666;
+}
+
+.cheat-timeline-summary strong {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.risk-text-low {
+  color: #389e0d;
+}
+
+.risk-text-medium {
+  color: #d48806;
+}
+
+.risk-text-high {
+  color: #cf1322;
+}
+
+.cheat-timeline-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 6px;
+  margin-bottom: 16px;
+}
+
+.cheat-timeline-content h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0 0 12px;
+}
+
+.cheat-timeline-empty {
+  background: #f0f0f0;
+  padding: 16px;
+  border: 1px solid #d9d9d9;
+  color: #595959;
+  text-align: center;
+  font-weight: 500;
+}
+
+.cheat-timeline-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cheat-timeline-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  position: relative;
+}
+
+.cheat-timeline-marker {
+  width: 28px;
+  height: 28px;
+  background: #1a1a1a;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 2px 2px 0 #ffcc00;
+}
+
+.cheat-timeline-body {
+  flex: 1;
+  background: #ffffff;
+  border: 2px solid #1a1a1a;
+  box-shadow: 3px 3px 0 #1a1a1a;
+  padding: 10px 14px;
+}
+
+.cheat-timeline-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.cheat-timeline-type {
+  font-size: 0.92rem;
+  color: #cf1322;
+}
+
+.cheat-timeline-time {
+  font-size: 0.8rem;
+  color: #8c8c8c;
+  font-weight: 600;
+}
+
+.cheat-timeline-detail {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #262626;
+  line-height: 1.4;
+}
+
+.cheat-timeline-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 2px solid #1a1a1a;
+  padding-top: 12px;
+}
+
+/* Badges & Column Alignments for Results Table */
+.proctoring-results-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.proctoring-results-risk-col {
+  width: 145px;
+  min-width: 145px;
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+.proctoring-results-risk-col .proctoring-risk-badge {
+  width: 100%;
+  text-align: center;
+  box-sizing: border-box;
+  margin-right: 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.proctoring-results-status-col {
+  width: 85px;
+  min-width: 85px;
+  flex-shrink: 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.proctoring-results-status-col .proctoring-terminated-tag {
+  margin-right: 0;
+  text-align: center;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.proctoring-results-action-col {
+  min-width: 100px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.proctoring-results-action-col .manager-text-button {
+  white-space: nowrap;
+}
+
+.proctoring-risk-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  border: 2px solid #1a1a1a;
+  box-shadow: 2px 2px 0 #1a1a1a;
+  margin-right: 6px;
+}
+
+.proctoring-risk-badge.risk-low {
+  background: #b7eb8f;
+  color: #135200;
+}
+
+.proctoring-risk-badge.risk-medium {
+  background: #ffe58f;
+  color: #874d00;
+}
+
+.proctoring-risk-badge.risk-high {
+  background: #ffccc7;
+  color: #a8071a;
+}
+
+.proctoring-terminated-tag {
+  display: inline-block;
+  background: #ff4d4f;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 2px;
+  margin-right: 6px;
+}
