@@ -57,7 +57,7 @@ api.interceptors.response.use(
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       const authorization = error.config?.headers.get('Authorization')
       const token = getAccessToken()
-      const isAuthForm = /\/auth\/(login|register)\/?$/.test(error.config?.url ?? '')
+      const isAuthForm = /\/auth\/(login|register|forgot-password|reset-password)\/?$/.test(error.config?.url ?? '')
       if (token && authorization === `Bearer ${token}` && !isAuthForm) {
         expireSession(getApiErrorMessage(error))
       }
@@ -79,6 +79,12 @@ const errorTranslations: Record<string, string> = {
   'password must be shorter than or equal to 72 bytes': 'Mật khẩu không được vượt quá 72 byte.',
   'fullName should not be empty': 'Vui lòng nhập họ và tên.',
   'fullName must be shorter than or equal to 100 characters': 'Họ và tên không được quá 100 ký tự.',
+  'Invalid or expired password reset token': 'Mã xác nhận không đúng hoặc đã hết hạn.',
+  'Password reset token has expired. Please request a new one': 'Mã xác nhận đã hết hạn. Vui lòng gửi lại yêu cầu mã mới.',
+  'Password must be at least 6 characters': 'Mật khẩu mới cần có ít nhất 6 ký tự.',
+  'Password cannot exceed 72 bytes': 'Mật khẩu mới không được vượt quá 72 byte.',
+  'Invalid email address': 'Vui lòng nhập địa chỉ email hợp lệ.',
+  'Reset token is required': 'Vui lòng nhập mã xác nhận.',
 }
 
 export function getApiErrorMessage(error: unknown): string {

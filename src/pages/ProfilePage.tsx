@@ -49,7 +49,9 @@ function ProfileContent({ user }: { user: AuthUser }) {
   const joined = new Date(user.createdAt).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 
   useEffect(() => {
-    setDraft(profile)
+    queueMicrotask(() => {
+      setDraft(profile)
+    })
   }, [profile])
 
   useEffect(() => {

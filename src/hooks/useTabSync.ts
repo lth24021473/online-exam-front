@@ -7,7 +7,9 @@ import { useEffect, useRef, useState } from 'react'
 export function useTabSync(onSyncCallback?: (silent: boolean) => void): number {
   const [tick, setTick] = useState(0)
   const callbackRef = useRef(onSyncCallback)
-  callbackRef.current = onSyncCallback
+  useEffect(() => {
+    callbackRef.current = onSyncCallback
+  })
 
   useEffect(() => {
     const onSync = () => {

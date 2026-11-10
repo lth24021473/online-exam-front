@@ -13,18 +13,17 @@ import './AdminUsersPage.css'
 
 type LoadState<T> = { key: string; value: T } | { key: string; error: string }
 
-function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBusy }: {
+function AdminUserDetail({ id, revision, currentUserId, onUpdate, onBusy }: {
   id: string
   revision: number
   currentUserId: string
   onUpdate: (user: UpdatedAdminUser) => void
-  onDelete: (id: string) => void
   onBusy: (busy: boolean) => void
 }) {
   const navigate = useNavigate()
   const [loaded, setLoaded] = useState<LoadState<AuthUser> | null>(null)
   const [role, setRole] = useState<AuthRole>('STUDENT')
-  const [confirmation, setConfirmation] = useState<'role' | 'delete' | null>(null)
+  const [confirmation, setConfirmation] = useState<'role' | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useAutoDismissNotice()
@@ -78,13 +77,6 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
         setRole(updated.role)
         onUpdate(updated)
         setNotice('Đã cập nhật vai trò. Người dùng cần đăng nhập lại.')
-      } else {
-        await adminUsersApi.remove(account.id)
-        if (account.id === currentUserId) {
-          finishOwnSession('Tài khoản của bạn đã được xóa.', requestToken)
-          return
-        }
-        onDelete(account.id)
       }
       setConfirmation(null)
     } catch (error) {
@@ -125,22 +117,16 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onDelete, onBu
           <button type="submit" className="button button-primary button-inline" disabled={busy || Boolean(confirmation) || role === account.role}>Lưu vai trò</button>
         </form>
         <p className="exam-muted admin-role-help">Đổi vai trò sẽ kết thúc các phiên đăng nhập hiện tại của tài khoản.</p>
-        <button type="button" className="button button-danger button-inline" disabled={busy || Boolean(confirmation)} onClick={() => {
-          clearFeedback()
-          setConfirmation('delete')
-        }}>Xóa tài khoản</button>
 
         {confirmation && <section className="admin-confirm" role="dialog" aria-labelledby="admin-confirm-title" onKeyDown={(event) => {
           if (event.key === 'Escape' && !busy) setConfirmation(null)
         }}>
-          <h3 id="admin-confirm-title">{confirmation === 'role' ? 'Đổi vai trò tài khoản?' : 'Xóa tài khoản?'}</h3>
-          <p>{confirmation === 'role'
-            ? `Đổi vai trò của ${account.email} thành ${roleLabels[role]}. Người dùng sẽ phải đăng nhập lại.`
-            : `Xóa tài khoản ${account.email}. Thao tác này không thể hoàn tác.`}</p>
+          <h3 id="admin-confirm-title">Đổi vai trò tài khoản?</h3>
+          <p>Đổi vai trò của {account.email} thành {roleLabels[role]}. Người dùng sẽ phải đăng nhập lại.</p>
           {account.id === currentUserId && <p className="form-error">Đây là tài khoản bạn đang dùng. Bạn sẽ được đưa về trang đăng nhập.</p>}
           <div className="exam-actions">
-            <button ref={confirmCancel} type="button" className="button button-secondary button-inline" disabled={busy} onClick={() => setConfirmation(null)}>{confirmation === 'role' ? 'Giữ nguyên' : 'Giữ tài khoản'}</button>
-            <button type="button" className={`button button-inline ${confirmation === 'delete' ? 'button-danger' : 'button-primary'}`} disabled={busy} onClick={() => { void confirmAction() }}>{busy ? 'Đang xử lý…' : confirmation === 'role' ? 'Xác nhận đổi vai trò' : 'Xác nhận xóa'}</button>
+            <button ref={confirmCancel} type="button" className="button button-secondary button-inline" disabled={busy} onClick={() => setConfirmation(null)}>Giữ nguyên</button>
+            <button type="button" className="button button-inline button-primary" disabled={busy} onClick={() => { void confirmAction() }}>{busy ? 'Đang xử lý…' : 'Xác nhận đổi vai trò'}</button>
           </div>
         </section>}
       </>}
@@ -184,14 +170,6 @@ export default function AdminUsersPage() {
       : previous)
   }
 
-  function deleteAccount(id: string) {
-    setLoaded((previous) => previous && 'value' in previous
-      ? { ...previous, value: previous.value.filter((account) => account.id !== id) }
-      : previous)
-    select('')
-    setNotice('Đã xóa tài khoản.')
-  }
-
   return <div className="exam-page admin-users-page">
     <header className="exam-page-heading">
       <div><h1>Quản lý tài khoản</h1><p>Xem người dùng, cập nhật vai trò và quản lý quyền truy cập.</p></div>
@@ -217,7 +195,7 @@ export default function AdminUsersPage() {
             </button>
           </li>)}</ul>}
         </section>
-        {selectedId && user ? <AdminUserDetail key={selectedId} id={selectedId} revision={revision} currentUserId={user.id} onUpdate={updateAccount} onDelete={deleteAccount} onBusy={setBusy} />
+        {selectedId && user ? <AdminUserDetail key={selectedId} id={selectedId} revision={revision} currentUserId={user.id} onUpdate={updateAccount} onBusy={setBusy} />
           : <section className="exam-panel admin-user-placeholder"><ShieldCheck size={34} aria-hidden="true" /><h2>Chọn một tài khoản</h2><p className="exam-muted">Xem thông tin và điều chỉnh vai trò trong danh sách bên cạnh.</p></section>}
       </div>}
   </div>

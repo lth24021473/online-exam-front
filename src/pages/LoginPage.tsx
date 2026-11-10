@@ -15,9 +15,13 @@ export default function LoginPage() {
   const { authenticate, sessionNotice } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [registrationNotice] = useAutoDismissNotice(location.state?.registrationSuccess === true
-    ? 'Tạo tài khoản thành công! Vui lòng đăng nhập để tiếp tục.'
-    : '')
+  const [successNotice] = useAutoDismissNotice(
+    location.state?.registrationSuccess === true
+      ? 'Tạo tài khoản thành công! Vui lòng đăng nhập để tiếp tục.'
+      : location.state?.passwordResetSuccess === true
+        ? 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.'
+        : '',
+  )
   const registeredEmail = typeof location.state?.registeredEmail === 'string' ? location.state.registeredEmail : ''
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -41,10 +45,10 @@ export default function LoginPage() {
   return (
     <>
       <h2 className="auth-title">Đăng nhập vào Tracnghiem.com</h2>
-      {registrationNotice && (
+      {successNotice && (
         <p className="form-success" role="status">
           <CircleCheck size={20} aria-hidden="true" />
-          <span>{registrationNotice}</span>
+          <span>{successNotice}</span>
         </p>
       )}
       {sessionNotice && <p className="form-error" role="alert">{sessionNotice}</p>}
