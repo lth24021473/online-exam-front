@@ -5,7 +5,7 @@ import Brand from '../components/Brand'
 export default function AuthLayout() {
   const location = useLocation()
   const pathname = location.pathname.replace(/\/+$/, '')
-  const isAuthFormPage = pathname === '/login' || pathname === '/register'
+  const isAuthFormPage = pathname === '/login' || pathname === '/register' || pathname === '/forgot-password'
   return (
     <div className={`auth-layout${isAuthFormPage ? ' auth-layout-form' : ''}`}>
       <a className="skip-link" href="#main-content">Đến nội dung chính</a>

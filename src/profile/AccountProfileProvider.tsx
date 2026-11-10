@@ -16,11 +16,13 @@ function AccountProfileSession({ user, children }: { user: AuthUser | null, chil
 
   useEffect(() => {
     if (user) {
-      setProfile((prev) => {
-        const next = readAccountProfile(user.id, user.fullName, user.workplace || '', user.currentResidence || '', user.updatedAt)
-        return (prev.fullName === next.fullName && prev.workplace === next.workplace && prev.currentResidence === next.currentResidence)
-          ? prev
-          : next
+      queueMicrotask(() => {
+        setProfile((prev) => {
+          const next = readAccountProfile(user.id, user.fullName, user.workplace || '', user.currentResidence || '', user.updatedAt)
+          return (prev.fullName === next.fullName && prev.workplace === next.workplace && prev.currentResidence === next.currentResidence)
+            ? prev
+            : next
+        })
       })
     }
   }, [user])

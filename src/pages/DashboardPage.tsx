@@ -140,7 +140,9 @@ function DashboardContent({ user }: { user: AuthUser }) {
 
     let active = true
     const controller = new AbortController()
-    setLoadingFreeExams(true)
+    queueMicrotask(() => {
+      if (active) setLoadingFreeExams(true)
+    })
     examsApi.list(1, controller.signal, 'STUDENT', 'PUBLISHED')
       .then((catalog) => {
         if (active) {

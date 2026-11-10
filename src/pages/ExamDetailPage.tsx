@@ -42,7 +42,7 @@ export default function ExamDetailPage() {
   }, [examId, revision, user?.role])
 
   const start = user?.role === 'STUDENT'
-  const now = Date.now()
+  const [now] = useState(() => Date.now())
   const notYetOpen = Boolean(data?.exam?.opensAt && new Date(data.exam.opensAt).getTime() > now)
   const isClosed = data?.exam?.status !== 'PUBLISHED' || Boolean(data?.exam?.closesAt && new Date(data.exam.closesAt).getTime() <= now)
   const maxAttempts = data?.exam?.maxAttempts ?? 1

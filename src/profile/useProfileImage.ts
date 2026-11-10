@@ -69,7 +69,9 @@ export function useProfileImage(userId: string, kind: 'avatar' | 'cover', initia
 
   useEffect(() => {
     if (initialUrl !== undefined) {
-      setImage(initialUrl)
+      queueMicrotask(() => {
+        setImage(initialUrl)
+      })
       try {
         if (initialUrl) {
           localStorage.setItem(storageKey, initialUrl)

@@ -1,4 +1,4 @@
-﻿import { expect, test as base } from '@playwright/test'
+import { expect, test as base } from '@playwright/test'
 import type { Page, Route } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 
@@ -25,6 +25,7 @@ const test = base.extend<{ api: ApiMock }>({
   api: [async ({ page }, use) => {
     const handlers = new Map<string, (route: Route) => Promise<void>>()
     handlers.set('GET /attempts', async (route) => route.fulfill({ json: { items: [], meta: { page: 1, limit: 6, total: 0, totalPages: 0 } } }))
+    handlers.set('GET /exams', async (route) => route.fulfill({ json: { items: [], meta: { page: 1, limit: 6, total: 0, totalPages: 0 } } }))
     const calls: ApiCall[] = []
     const unexpected: string[] = []
     await page.route('http://localhost:3000/api/v1/**', async (route) => {
@@ -102,8 +103,8 @@ test('public navigation, forgotten-password explanation, and 404 recovery', asyn
   await page.locator('.auth-switch').getByRole('link', { name: 'Đăng nhập', exact: true }).click()
   await page.getByRole('link', { name: 'Quên mật khẩu?' }).click()
   await expect(page).toHaveURL('/forgot-password')
-  await expect(page.getByText(/Tính năng khôi phục mật khẩu hiện chưa khả dụng/)).toBeVisible()
-  await expect(page.locator('form')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Quên mật khẩu?' })).toBeVisible()
+  await expect(page.locator('form')).toHaveCount(1)
   await page.getByRole('link', { name: 'Quay lại đăng nhập' }).click()
   await expect(page).toHaveURL('/login')
   await page.goto('/route-that-does-not-exist')
@@ -232,7 +233,7 @@ test('saved session reloads through bearer /users/me and redirects authenticated
     await expect(page).toHaveURL('/dashboard')
     await expect(page.getByRole('heading', { name: `Xin chào, ${user.fullName}!` })).toBeVisible()
   }
-  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts'].includes(call.key) && call.authorization === `Bearer ${token}`)).toBe(true)
+  expect(api.calls.every((call) => ['GET /users/me', 'GET /attempts', 'GET /exams'].includes(call.key) && call.authorization === `Bearer ${token}`)).toBe(true)
 })
 
 test('logout clears the local session on success and network error', async ({ page, api }) => {
@@ -357,5 +358,53 @@ test('a STUDENT login returns to dashboard when a saved destination requires man
   await fillLogin(page)
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
   await expect(page).toHaveURL('/dashboard')
-  expect(api.calls.some((call) => call.key.startsWith('GET /exams'))).toBe(false)
+  expect(api.calls.some((call) => call.key.startsWith('GET /manage/exams'))).toBe(false)
+})
+
+test('user can request reset code and reset password with token', async ({ page, api }) => {
+  api.handle('POST /auth/forgot-password', reply(200, { message: 'Mã xác nhận đã được gửi đến email.' }))
+  api.handle('POST /auth/reset-password', reply(200, { message: 'Password has been reset successfully.' }))
+
+  await page.goto('/forgot-password')
+  await expect(page.getByRole('heading', { name: 'Quên mật khẩu?' })).toBeVisible()
+
+  // 1. Enter email and request code
+  await page.getByPlaceholder('Nhập địa chỉ email của bạn').fill('student@example.com')
+  await page.getByRole('button', { name: 'Gửi mã xác nhận' }).click()
+
+  // 2. Form transitions to reset password step
+  await expect(page.getByRole('heading', { name: 'Đặt lại mật khẩu' })).toBeVisible()
+  await expect(page.getByText('Mã xác nhận đã được gửi đến email.')).toBeVisible()
+
+  // 3. Fill reset token and new passwords
+  await page.getByPlaceholder('Mã xác nhận (Token từ email)').fill('test-token-123')
+  await page.getByPlaceholder('Mật khẩu mới (ít nhất 6 ký tự)').fill('NewPassword123')
+  await page.getByPlaceholder('Xác nhận mật khẩu mới').fill('NewPassword123')
+  await page.getByRole('button', { name: 'Xác nhận đổi mật khẩu' }).click()
+
+  // 4. Navigates to login with success notice
+  await expect(page).toHaveURL('/login')
+  await expect(page.getByText('Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.')).toBeVisible()
+  await expect(page.getByLabel('Địa chỉ email', { exact: true })).toHaveValue('student@example.com')
+
+  expect(api.calls).toEqual([
+    { key: 'POST /auth/forgot-password', body: { email: 'student@example.com' }, authorization: undefined },
+    { key: 'POST /auth/reset-password', body: { email: 'student@example.com', token: 'test-token-123', newPassword: 'NewPassword123' }, authorization: undefined },
+  ])
+})
+
+test('pre-fills token and email when opening reset link from email query params', async ({ page, api }) => {
+  api.handle('POST /auth/reset-password', reply(200, { message: 'Password has been reset successfully.' }))
+
+  await page.goto('/forgot-password?token=email-token-xyz&email=student@example.com')
+  await expect(page.getByRole('heading', { name: 'Đặt lại mật khẩu' })).toBeVisible()
+  await expect(page.getByPlaceholder('Địa chỉ email tài khoản')).toHaveValue('student@example.com')
+  await expect(page.getByPlaceholder('Mã xác nhận (Token từ email)')).toHaveValue('email-token-xyz')
+
+  await page.getByPlaceholder('Mật khẩu mới (ít nhất 6 ký tự)').fill('NewPassword123')
+  await page.getByPlaceholder('Xác nhận mật khẩu mới').fill('NewPassword123')
+  await page.getByRole('button', { name: 'Xác nhận đổi mật khẩu' }).click()
+
+  await expect(page).toHaveURL('/login')
+  await expect(page.getByText('Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.')).toBeVisible()
 })

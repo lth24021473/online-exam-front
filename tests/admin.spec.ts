@@ -93,8 +93,7 @@ const test = base.extend<{ api: ApiMock }>({
         return
       }
       if (selected && key === `DELETE /admin/users/${userId}`) {
-        api.users = api.users.filter((user) => user.id !== userId)
-        await route.fulfill({ status: 204 })
+        await route.fulfill({ status: 404, json: { message: `Cannot DELETE /api/v1/admin/users/${userId}`, error: 'Not Found', statusCode: 404 } })
         return
       }
       unexpected.push(key)
@@ -162,27 +161,14 @@ test('admin profile has the correct role and navigation; user role changes persi
   await captureAdminPreview(page, 'test-results/admin-accounts-mobile.png')
 })
 
-test('deleting another account requires explicit confirmation and refreshes the list', async ({ page, api }) => {
+test('admin user detail does not show a delete account button and direct delete is forbidden', async ({ page, api }) => {
   await openAdmin(page)
   await selectUser(page, student)
-  await page.getByRole('button', { name: 'Xóa tài khoản', exact: true }).click()
-  const dialog = page.getByRole('dialog')
-  await expect(dialog).toBeVisible()
-  await expect(dialog).toContainText(student.email)
+  await expect(page.getByRole('button', { name: 'Xóa tài khoản', exact: true })).toHaveCount(0)
   expect(mutationCalls(api)).toEqual([])
-  await dialog.getByRole('button', { name: 'Giữ tài khoản', exact: true }).click()
-  await expect(dialog).toHaveCount(0)
-  expect(mutationCalls(api)).toEqual([])
-  await page.getByRole('button', { name: 'Xóa tài khoản', exact: true }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận xóa', exact: true }).click()
-  await expect(page.getByRole('button', { name: `Xem ${student.email}`, exact: true })).toHaveCount(0)
-  expect(api.users.some((user) => user.id === student.id)).toBe(false)
-  expect(mutationCalls(api)).toEqual([{
-    key: `DELETE /admin/users/${student.id}`, body: null, authorization: `Bearer ${token}`,
-  }])
 })
 
-test('account role and deletion notices each expire after one second', async ({ page }) => {
+test('account role notice expires after one second', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-03T00:00:00Z') })
   await openAdmin(page)
   await selectUser(page, student)
@@ -196,15 +182,6 @@ test('account role and deletion notices each expire after one second', async ({ 
   await expect(roleNotice).toBeVisible()
   await page.clock.runFor(1)
   await expect(roleNotice).toHaveCount(0)
-
-  await page.getByRole('button', { name: 'Xóa tài khoản', exact: true }).click()
-  await page.getByRole('button', { name: 'Xác nhận xóa', exact: true }).click()
-  const deleteNotice = page.getByRole('status').filter({ hasText: 'Đã xóa tài khoản.' })
-  await expect(deleteNotice).toBeVisible()
-  await page.clock.runFor(999)
-  await expect(deleteNotice).toBeVisible()
-  await page.clock.runFor(1)
-  await expect(deleteNotice).toHaveCount(0)
 })
 
 for (const role of ['STUDENT', 'EXAM_MANAGER'] as const) {
@@ -289,19 +266,10 @@ test('changing the current admin role ends the local session', async ({ page, ap
   expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBe('fresh-student-token')
 })
 
-test('deleting the current account ends the session only after confirmation', async ({ page, api }) => {
+test('admin cannot delete the current account from the UI', async ({ page }) => {
   await openAdmin(page)
   await selectUser(page, currentAdmin)
-  await page.getByRole('button', { name: 'Xóa tài khoản', exact: true }).click()
-  await expect(page.getByRole('dialog')).toContainText(currentAdmin.email)
-  expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBe(token)
-  expect(mutationCalls(api)).toEqual([])
-  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận xóa', exact: true }).click()
-  await expectSessionEnded(page)
-  await expect(page.getByRole('alert')).toContainText('Tài khoản của bạn đã được xóa')
-  expect(mutationCalls(api)).toEqual([{
-    key: `DELETE /admin/users/${currentAdmin.id}`, body: null, authorization: `Bearer ${token}`,
-  }])
+  await expect(page.getByRole('button', { name: 'Xóa tài khoản', exact: true })).toHaveCount(0)
 })
 
 test('changed admin permissions end the session with a translated reason on login', async ({ page, api }) => {
@@ -345,89 +313,60 @@ test('admin catalog shows drafts and closed exams and detail counts questions fr
       { id: 'question-three', content: 'Câu hỏi ba', position: 3 },
     ],
   }))
-  await page.goto('/exams')
+  await page.goto('/manage/exams')
   for (const exam of [draft, published, closed]) {
     await expect(page.getByRole('heading', { name: exam.title, exact: true })).toBeVisible()
   }
-  await page.locator('article').filter({ has: page.getByRole('heading', { name: published.title, exact: true }) })
-    .getByRole('link', { name: 'Xem đề thi' }).click()
-  await expect(page.getByRole('heading', { name: published.title, exact: true })).toBeVisible()
-  await expect(page.getByText('3 câu', { exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Bắt đầu / Tiếp tục bài', exact: true })).toHaveCount(0)
   expect(mutationCalls(api)).toEqual([])
 })
 
-test('deleting an account that owns exams or attempts shows the translated conflict and preserves the account', async ({ page, api }) => {
-  api.handle(`DELETE /admin/users/${student.id}`, reply(409, {
-    message: 'User cannot be deleted while they own exams or attempts',
-  }))
+test('direct delete request receives 404 not found as endpoint does not exist', async ({ page }) => {
   await openAdmin(page)
-  await selectUser(page, student)
-  await page.getByRole('button', { name: 'Xóa tài khoản', exact: true }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận xóa', exact: true }).click()
-
-  await expect(page.getByRole('alert')).toHaveText('Không thể xóa tài khoản đang có đề thi hoặc bài làm. Hãy giữ tài khoản hoặc thay đổi vai trò phù hợp.')
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: `Xem ${student.email}`, exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: student.fullName, exact: true })).toBeVisible()
-  expect(api.users.find((user) => user.id === student.id)).toEqual(student)
-  expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBe(token)
-  expect(mutationCalls(api)).toEqual([{
-    key: `DELETE /admin/users/${student.id}`, body: null, authorization: `Bearer ${token}`,
-  }])
-
-  // The failure releases the controls so the admin can retry or keep the account.
-  await expect(page.getByRole('button', { name: 'Xóa tài khoản', exact: true })).toBeEnabled()
-  await page.getByRole('button', { name: 'Xóa tài khoản', exact: true }).click()
-  await expect(page.getByRole('dialog').getByRole('button', { name: 'Xác nhận xóa', exact: true })).toBeEnabled()
-  await page.getByRole('dialog').getByRole('button', { name: 'Giữ tài khoản', exact: true }).click()
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  expect(mutationCalls(api)).toHaveLength(1)
+  const result = await page.evaluate(async (userId) => {
+    const response = await fetch(`http://localhost:3000/api/v1/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer mock-admin-token' },
+    })
+    return { status: response.status }
+  }, student.id)
+  expect(result.status).toBe(404)
 })
 
-for (const action of ['role', 'delete'] as const) {
-  test(`a delayed successful own ${action} change cannot end a newer login session`, async ({ page, api }) => {
-    let release: () => void = () => {}
-    const pending = new Promise<void>((resolve) => { release = resolve })
-    const method = action === 'role' ? 'PATCH' : 'DELETE'
-    const path = `/admin/users/${currentAdmin.id}${action === 'role' ? '/role' : ''}`
-    api.handle(`${method} ${path}`, async (route) => {
-      await pending
-      if (action === 'role') await route.fulfill({ json: { ...currentAdmin, role: 'STUDENT' } })
-      else await route.fulfill({ status: 204 })
-    })
-    await openAdmin(page)
-    await selectUser(page, currentAdmin)
-    if (action === 'role') {
-      await page.getByLabel('Vai trò', { exact: true }).selectOption('STUDENT')
-      await page.getByRole('button', { name: 'Lưu vai trò', exact: true }).click()
-      await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận đổi vai trò', exact: true }).click()
-    } else {
-      await page.getByRole('button', { name: 'Xóa tài khoản', exact: true }).click()
-      await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận xóa', exact: true }).click()
-    }
-    try {
-      await expect.poll(() => mutationCalls(api).length).toBe(1)
-      await page.getByRole('link', { name: 'Cài đặt', exact: true }).click()
-      await page.getByRole('button', { name: 'Đăng xuất tài khoản', exact: true }).click()
-      await expectSessionEnded(page)
-      api.role = 'STUDENT'
-      api.handle('POST /auth/login', reply(200, { accessToken: 'newer-session-token', user: student }))
-      await page.getByLabel('Địa chỉ email', { exact: true }).fill(student.email)
-      await page.getByLabel('Mật khẩu', { exact: true }).fill('StudentPass123')
-      await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
-      await expect(page).toHaveURL('/settings')
-      await page.getByRole('link', { name: 'Trang chủ', exact: true }).click()
-      await expect(page).toHaveURL('/dashboard')
-      await expect(page.getByRole('heading', { name: `Xin chào, ${student.fullName}!` })).toBeVisible()
-      const response = page.waitForResponse((value) => value.request().method() === method && new URL(value.url()).pathname === '/api/v1' + path)
-      release()
-      await (await response).finished()
-      // The old XHR callback and React redirect must finish before checking the new session.
-      await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
-      await expect(page).toHaveURL('/dashboard')
-      await expect(page.getByRole('heading', { name: `Xin chào, ${student.fullName}!` })).toBeVisible()
-      expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBe('newer-session-token')
-    } finally { release() }
+test('a delayed successful own role change cannot end a newer login session', async ({ page, api }) => {
+  let release: () => void = () => {}
+  const pending = new Promise<void>((resolve) => { release = resolve })
+  const method = 'PATCH'
+  const path = `/admin/users/${currentAdmin.id}/role`
+  api.handle(`${method} ${path}`, async (route) => {
+    await pending
+    await route.fulfill({ json: { ...currentAdmin, role: 'STUDENT' } })
   })
-}
+  await openAdmin(page)
+  await selectUser(page, currentAdmin)
+  await page.getByLabel('Vai trò', { exact: true }).selectOption('STUDENT')
+  await page.getByRole('button', { name: 'Lưu vai trò', exact: true }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận đổi vai trò', exact: true }).click()
+  try {
+    await expect.poll(() => mutationCalls(api).length).toBe(1)
+    await page.getByRole('link', { name: 'Cài đặt', exact: true }).click()
+    await page.getByRole('button', { name: 'Đăng xuất tài khoản', exact: true }).click()
+    await expectSessionEnded(page)
+    api.role = 'STUDENT'
+    api.handle('POST /auth/login', reply(200, { accessToken: 'newer-session-token', user: student }))
+    await page.getByLabel('Địa chỉ email', { exact: true }).fill(student.email)
+    await page.getByLabel('Mật khẩu', { exact: true }).fill('StudentPass123')
+    await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
+    await expect(page).toHaveURL('/settings')
+    await page.getByRole('link', { name: 'Trang chủ', exact: true }).click()
+    await expect(page).toHaveURL('/dashboard')
+    await expect(page.getByRole('heading', { name: `Xin chào, ${student.fullName}!` })).toBeVisible()
+    const response = page.waitForResponse((value) => value.request().method() === method && new URL(value.url()).pathname === '/api/v1' + path)
+    release()
+    await (await response).finished()
+    // The old XHR callback and React redirect must finish before checking the new session.
+    await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+    await expect(page).toHaveURL('/dashboard')
+    await expect(page.getByRole('heading', { name: `Xin chào, ${student.fullName}!` })).toBeVisible()
+    expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBe('newer-session-token')
+  } finally { release() }
+})
