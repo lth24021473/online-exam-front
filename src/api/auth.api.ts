@@ -39,6 +39,16 @@ export interface ResetPasswordPayload {
   newPassword: string
 }
 
+export interface ChangePasswordPayload {
+  currentPassword: string
+  newPassword: string
+}
+
+export interface ChangePasswordResponse {
+  message: string
+  accessToken: string
+}
+
 export const authApi = {
   async login(payload: LoginPayload): Promise<AuthResponse> {
     const { data } = await api.post<AuthResponse>('/auth/login', {
@@ -86,6 +96,11 @@ export const authApi = {
     currentResidence?: string | null
   }): Promise<AuthUser> {
     const { data } = await api.patch<AuthUser>('/users/me', payload)
+    return data
+  },
+
+  async changePassword(payload: ChangePasswordPayload): Promise<ChangePasswordResponse> {
+    const { data } = await api.post<ChangePasswordResponse>('/auth/change-password', payload)
     return data
   },
 

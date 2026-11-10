@@ -85,6 +85,13 @@ const errorTranslations: Record<string, string> = {
   'Password cannot exceed 72 bytes': 'Mật khẩu mới không được vượt quá 72 byte.',
   'Invalid email address': 'Vui lòng nhập địa chỉ email hợp lệ.',
   'Reset token is required': 'Vui lòng nhập mã xác nhận.',
+  'Current password is incorrect': 'Mật khẩu hiện tại không chính xác.',
+  'New password must be different from current password': 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+  'Current password is required': 'Vui lòng nhập mật khẩu hiện tại.',
+  'currentPassword should not be empty': 'Vui lòng nhập mật khẩu hiện tại.',
+  'currentPassword must be a string': 'Mật khẩu hiện tại không hợp lệ.',
+  'newPassword must be longer than or equal to 6 characters': 'Mật khẩu mới cần có ít nhất 6 ký tự.',
+  'newPassword must be shorter than or equal to 72 bytes': 'Mật khẩu mới không được vượt quá 72 byte.',
 }
 
 export function getApiErrorMessage(error: unknown): string {

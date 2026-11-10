@@ -246,6 +246,32 @@
 .account-action-danger:hover:not(:disabled) {
   background: #ffb3ab;
 }
+.account-edit-security {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 28px;
+  padding: 20px 22px;
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface-muted);
+  box-shadow: 3px 3px 0px 0px var(--border);
+}
+.account-edit-security h3 {
+  margin: 0 0 6px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.account-edit-security p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
 .account-edit-media { display: grid; grid-template-columns: 1fr; gap: 28px; margin-top: 30px; padding-top: 28px; border-top: 2px solid var(--border); }
 .account-edit-image-section { min-width: 0; }
 .account-edit-image-section h3 { margin: 0 0 20px; font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 800; text-transform: uppercase; }
@@ -264,6 +290,7 @@
 }
 @media (max-width: 600px) {
   .account-edit-fields { grid-template-columns: 1fr; }
+  .account-edit-security { flex-direction: column; align-items: stretch; }
 }
 
 .profile-classes-link {

@@ -246,6 +246,13 @@ function ProfileContent({ user }: { user: AuthUser }) {
                 <button className="account-action-button" type="button" onClick={cancelProfileChanges}>Hủy thay đổi</button>
               </div>
             </form>
+            <div className="account-edit-security">
+              <div>
+                <h3>Mật khẩu & Bảo mật</h3>
+                <p>Bạn có thể thay đổi mật khẩu tài khoản trong trang Cài đặt.</p>
+              </div>
+              <Link to="/settings#change-password" className="account-action-button">Đổi mật khẩu</Link>
+            </div>
             <div className="account-edit-media">
               <div className="account-edit-image-section">
                 <h3>Ảnh đại diện</h3>

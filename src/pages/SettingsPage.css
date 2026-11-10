@@ -70,6 +70,147 @@
   background: #ffcc00;
 }
 
+.settings-page .account-settings-section-desc {
+  margin: -10px 0 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.settings-page .account-password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 520px;
+  width: 100%;
+}
+
+.settings-page .account-password-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.settings-page .account-form-field {
+  min-width: 0;
+  width: 100%;
+}
+
+.settings-page .account-form-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.settings-page .account-form-field input {
+  display: block;
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.settings-page .account-form-field input::placeholder {
+  color: var(--field-placeholder);
+}
+
+.settings-page .account-form-field input:focus {
+  box-shadow: 3px 3px 0px 0px var(--border);
+}
+
+.settings-page .account-password-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.settings-page .account-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 0;
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  box-shadow: 2px 2px 0px 0px var(--border);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.settings-page .account-feedback > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.settings-page .account-feedback-error {
+  color: #cc0000;
+  background: #ffdad6;
+}
+
+.settings-page .account-feedback-success {
+  color: #006622;
+  background: #e6f9ed;
+}
+
+.settings-page .account-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 2px solid var(--border);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 3px 3px 0px 0px var(--border);
+  cursor: pointer;
+  transition: transform 80ms, box-shadow 80ms, background 120ms;
+}
+
+.settings-page .account-action-button:hover:not(:disabled) {
+  background: var(--surface-muted);
+}
+
+.settings-page .account-action-button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0px 0px var(--border);
+}
+
+.settings-page .account-action-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.settings-page .account-action-primary {
+  background: #ffcc00;
+  color: #1a1a1a;
+}
+
+.settings-page .account-action-primary:hover:not(:disabled) {
+  background: #e6b800;
+}
+
 .settings-page .account-settings-email { margin: 0 0 18px; color: var(--text-muted); font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
 .settings-page .settings-logout {
   display: inline-flex;
