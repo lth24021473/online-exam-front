@@ -408,3 +408,90 @@ test('pre-fills token and email when opening reset link from email query params'
   await expect(page).toHaveURL('/login')
   await expect(page.getByText('Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.')).toBeVisible()
 })
+
+test('user can change password successfully in settings page', async ({ page, api }) => {
+  await seedSession(page)
+  api.handle('GET /users/me', reply(200, user))
+  api.handle('POST /auth/change-password', reply(200, { message: 'Đổi mật khẩu thành công.', accessToken: 'fresh-new-token' }))
+
+  await page.goto('/settings')
+  await expect(page.getByRole('heading', { level: 3, name: 'Đổi mật khẩu' })).toBeVisible()
+
+  await page.getByLabel('Mật khẩu hiện tại').fill('OldPassword123')
+  await page.getByLabel('Mật khẩu mới', { exact: true }).fill('NewPassword456')
+  await page.getByLabel('Xác nhận mật khẩu mới').fill('NewPassword456')
+  await page.getByRole('button', { name: 'Cập nhật mật khẩu' }).click()
+
+  await expect(page.getByRole('status')).toContainText('Đổi mật khẩu thành công!')
+  expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBe('fresh-new-token')
+  await expect(page.getByLabel('Mật khẩu hiện tại')).toHaveValue('')
+  await expect(page.getByLabel('Mật khẩu mới', { exact: true })).toHaveValue('')
+  await expect(page.getByLabel('Xác nhận mật khẩu mới')).toHaveValue('')
+
+  const changeCall = api.calls.find((call) => call.key === 'POST /auth/change-password')
+  expect(changeCall).toEqual({
+    key: 'POST /auth/change-password',
+    body: { currentPassword: 'OldPassword123', newPassword: 'NewPassword456' },
+    authorization: `Bearer ${token}`,
+  })
+})
+
+test('change password validates required fields, minimum length, mismatch, and identical password', async ({ page, api }) => {
+  await seedSession(page)
+  api.handle('GET /users/me', reply(200, user))
+
+  await page.goto('/settings')
+  const submitButton = page.getByRole('button', { name: 'Cập nhật mật khẩu' })
+
+  // 1. Empty current password
+  await submitButton.click()
+  await expect(page.getByRole('alert')).toContainText('Vui lòng nhập mật khẩu hiện tại.')
+
+  // 2. Empty new password
+  await page.getByLabel('Mật khẩu hiện tại').fill('OldPassword123')
+  await submitButton.click()
+  await expect(page.getByRole('alert')).toContainText('Vui lòng nhập mật khẩu mới.')
+
+  // 3. New password under 6 chars
+  await page.getByLabel('Mật khẩu mới', { exact: true }).fill('12345')
+  await submitButton.click()
+  await expect(page.getByRole('alert')).toContainText('Mật khẩu mới phải có ít nhất 6 ký tự.')
+
+  // 4. New password identical to current password
+  await page.getByLabel('Mật khẩu mới', { exact: true }).fill('OldPassword123')
+  await submitButton.click()
+  await expect(page.getByRole('alert')).toContainText('Mật khẩu mới phải khác mật khẩu hiện tại.')
+
+  // 5. Confirmation mismatch
+  await page.getByLabel('Mật khẩu mới', { exact: true }).fill('NewPassword456')
+  await page.getByLabel('Xác nhận mật khẩu mới').fill('DifferentPassword789')
+  await submitButton.click()
+  await expect(page.getByRole('alert')).toContainText('Mật khẩu xác nhận không khớp.')
+
+  expect(api.calls.some((call) => call.key === 'POST /auth/change-password')).toBe(false)
+})
+
+test('change password shows translated server error when current password is wrong', async ({ page, api }) => {
+  await seedSession(page)
+  api.handle('GET /users/me', reply(200, user))
+  api.handle('POST /auth/change-password', reply(400, { message: 'Current password is incorrect' }))
+
+  await page.goto('/settings')
+  await page.getByLabel('Mật khẩu hiện tại').fill('WrongOldPassword')
+  await page.getByLabel('Mật khẩu mới', { exact: true }).fill('NewPassword456')
+  await page.getByLabel('Xác nhận mật khẩu mới').fill('NewPassword456')
+  await page.getByRole('button', { name: 'Cập nhật mật khẩu' }).click()
+
+  await expect(page.getByRole('alert')).toContainText('Mật khẩu hiện tại không chính xác.')
+})
+
+test('profile edit tab contains a link to change password in settings', async ({ page, api }) => {
+  await seedSession(page)
+  api.handle('GET /users/me', reply(200, user))
+
+  await page.goto('/profile?tab=edit')
+  const link = page.getByRole('link', { name: 'Đổi mật khẩu', exact: true })
+  await expect(link).toBeVisible()
+  await link.click()
+  await expect(page).toHaveURL('/settings#change-password')
+})
