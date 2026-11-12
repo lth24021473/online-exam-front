@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { AuthRole, AuthUser } from '../api/auth.api'
 import { adminUsersApi, getAdminErrorMessage } from '../api/admin-users'
 import type { UpdatedAdminUser } from '../api/admin-users'
-import { expireSession, getAccessToken } from '../api/axios'
+import { expireSession, getAccessToken, getSessionEpoch } from '../api/axios'
 import { useAuth } from '../auth/useAuth'
 import { accountRoles, roleLabels } from '../auth/roles'
 import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
@@ -52,9 +52,9 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onBusy }: {
   const account = current && 'value' in current ? current.value : null
   function clearFeedback() { setError(''); setNotice('') }
 
-  const finishOwnSession = (message: string, requestToken: string | null) => {
+  const finishOwnSession = (message: string, requestToken: string | null, requestEpoch: number) => {
     // A delayed response from a previous login must not clear a newer session.
-    if (!requestToken || getAccessToken() !== requestToken) return
+    if (!requestToken || !getAccessToken() || getSessionEpoch() !== requestEpoch) return
     expireSession(message)
     navigate('/login', { replace: true })
   }
@@ -63,6 +63,7 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onBusy }: {
     if (!account || !confirmation || mutationLock.current) return
     mutationLock.current = true
     const requestToken = getAccessToken()
+    const requestEpoch = getSessionEpoch()
     setBusy(true)
     onBusy(true)
     clearFeedback()
@@ -70,7 +71,7 @@ function AdminUserDetail({ id, revision, currentUserId, onUpdate, onBusy }: {
       if (confirmation === 'role') {
         const updated = await adminUsersApi.updateRole(account.id, role)
         if (account.id === currentUserId) {
-          finishOwnSession('Vai trò của bạn đã thay đổi. Vui lòng đăng nhập lại.', requestToken)
+          finishOwnSession('Vai trò của bạn đã thay đổi. Vui lòng đăng nhập lại.', requestToken, requestEpoch)
           return
         }
         setLoaded({ key, value: { ...account, ...updated } })

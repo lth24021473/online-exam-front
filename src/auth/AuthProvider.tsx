@@ -1,9 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import axios from 'axios'
 import { authApi } from '../api/auth.api'
 import type { AuthResponse, AuthUser } from '../api/auth.api'
-import { ACCESS_TOKEN_KEY, getAccessToken, getApiErrorMessage, SESSION_EXPIRED_EVENT, setAccessToken } from '../api/axios'
+import {
+  ACCESS_TOKEN_KEY,
+  bumpSessionEpoch,
+  getAccessToken,
+  getApiErrorMessage,
+  getSessionEpoch,
+  isSameTokenSubject,
+  REFRESH_TOKEN_KEY,
+  rememberRefreshedToken,
+  SESSION_EXPIRED_EVENT,
+  setAccessToken,
+  setRefreshToken,
+  TOKEN_REFRESHED_EVENT,
+} from '../api/axios'
 import { AuthContext } from './auth-context'
 
 interface Session {
@@ -22,25 +35,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [restoreError, setRestoreError] = useState('')
   const [sessionNotice, setSessionNotice] = useState('')
   const [retry, setRetry] = useState(0)
+  const sessionRef = useRef(session)
+  useEffect(() => {
+    sessionRef.current = session
+  }, [session])
 
   const clearSession = useCallback(() => {
     setRestoreError('')
     setSessionNotice('')
     setAccessToken(null)
+    setRefreshToken(null)
     setSession({ token: null, user: null, loading: false })
   }, [])
 
   useEffect(() => {
     if (!session.token || !session.loading) return
     const controller = new AbortController()
-    const token = session.token
+    const epoch = getSessionEpoch()
 
     authApi.me(controller.signal).then((user) => {
-      if (controller.signal.aborted || getAccessToken() !== token) return
-      setSession({ token, user, loading: false })
+      if (controller.signal.aborted || getSessionEpoch() !== epoch) return
+      const currentToken = getAccessToken()
+      if (!currentToken) return
+      setSession({ token: currentToken, user, loading: false })
     }).catch((error: unknown) => {
       if (controller.signal.aborted || axios.isCancel(error)) return
-      if (getAccessToken() !== token) return
+      if (getSessionEpoch() !== epoch) return
       if (axios.isAxiosError(error) && [401, 403].includes(error.response?.status ?? 0)) clearSession()
       else setRestoreError(getApiErrorMessage(error))
     })
@@ -55,20 +75,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRestoreError('')
       setSession({ token: null, user: null, loading: false })
     }
+    const onRefreshed = (event: Event) => {
+      const detail = (event as CustomEvent<{ accessToken?: string; user?: AuthUser }>).detail
+      const accessToken = detail?.accessToken
+      if (!accessToken) return
+      setSession((current) => {
+        if (!current.token) return current
+        const nextUser = detail.user && (!current.user || current.user.id === detail.user.id)
+          ? detail.user
+          : current.user
+        return { ...current, token: accessToken, user: nextUser }
+      })
+    }
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== ACCESS_TOKEN_KEY && event.key !== null) return
+      if (event.key !== ACCESS_TOKEN_KEY && event.key !== REFRESH_TOKEN_KEY && event.key !== null) return
       const token = getAccessToken()
+      const current = sessionRef.current
       setRestoreError('')
       setSessionNotice('')
-      setSession((current) => current.token === token
-        ? current
-        : { token, user: null, loading: Boolean(token) })
+      if (!token) {
+        if (current.token !== null) bumpSessionEpoch()
+        setSession({ token: null, user: null, loading: false })
+        return
+      }
+      if (current.token === token) return
+      if (current.token && current.user && isSameTokenSubject(current.token, token)) {
+        rememberRefreshedToken(current.token, token, getSessionEpoch())
+        setSession((prev) => (prev.token ? { ...prev, token } : prev))
+        return
+      }
+      bumpSessionEpoch()
+      setSession({ token, user: null, loading: true })
     }
 
     window.addEventListener(SESSION_EXPIRED_EVENT, onExpired)
+    window.addEventListener(TOKEN_REFRESHED_EVENT, onRefreshed)
     window.addEventListener('storage', onStorage)
     return () => {
       window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired)
+      window.removeEventListener(TOKEN_REFRESHED_EVENT, onRefreshed)
       window.removeEventListener('storage', onStorage)
     }
   }, [])
@@ -136,17 +181,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRestoreError('')
     setSessionNotice('')
     setAccessToken(response.accessToken)
+    setRefreshToken(response.refreshToken ?? null)
     setSession({ token: response.accessToken, user: response.user, loading: false })
   }, [])
 
   const logout = useCallback(async () => {
     const token = getAccessToken()
+    const epoch = getSessionEpoch()
     try {
       if (token) await authApi.logout()
     } catch {
       // Always end the local session, including when the server is unavailable.
     } finally {
-      if (getAccessToken() === token) clearSession()
+      if (getSessionEpoch() === epoch) clearSession()
     }
   }, [clearSession])
 

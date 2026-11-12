@@ -1,10 +1,91 @@
 import axios from 'axios'
+import type { InternalAxiosRequestConfig } from 'axios'
 
 export const ACCESS_TOKEN_KEY = 'online-exam.access-token'
+export const REFRESH_TOKEN_KEY = 'online-exam.refresh-token'
 export const SESSION_EXPIRED_EVENT = 'online-exam:session-expired'
+export const TOKEN_REFRESHED_EVENT = 'online-exam:token-refreshed'
 
 let memoryToken: string | null = null
 let useMemoryStorage = false
+let memoryRefreshToken: string | null = null
+let useMemoryRefreshStorage = false
+let sessionEpoch = 0
+let refreshPromise: Promise<string> | null = null
+const refreshedTokens = new Map<string, { epoch: number; accessToken: string }>()
+
+interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean
+}
+
+interface RefreshResponsePayload {
+  accessToken: string
+  refreshToken?: string
+  user?: unknown
+}
+
+function writeAccessToken(token: string | null): void {
+  memoryToken = token
+  try {
+    if (token) localStorage.setItem(ACCESS_TOKEN_KEY, token)
+    else localStorage.removeItem(ACCESS_TOKEN_KEY)
+    useMemoryStorage = false
+  } catch {
+    useMemoryStorage = true
+    // Authentication can still work in memory for the current tab.
+  }
+}
+
+function writeRefreshToken(token: string | null): void {
+  memoryRefreshToken = token
+  try {
+    if (token) localStorage.setItem(REFRESH_TOKEN_KEY, token)
+    else localStorage.removeItem(REFRESH_TOKEN_KEY)
+    useMemoryRefreshStorage = false
+  } catch {
+    useMemoryRefreshStorage = true
+    // Refresh token can still work in memory for the current tab.
+  }
+}
+
+export function getSessionEpoch(): number {
+  return sessionEpoch
+}
+
+export function bumpSessionEpoch(): number {
+  sessionEpoch += 1
+  refreshedTokens.clear()
+  return sessionEpoch
+}
+
+export function rememberRefreshedToken(oldToken: string, newToken: string, epoch = sessionEpoch): void {
+  if (!oldToken || !newToken || oldToken === newToken) return
+  if (refreshedTokens.size >= 10) {
+    const oldestKey = refreshedTokens.keys().next().value
+    if (oldestKey !== undefined) refreshedTokens.delete(oldestKey)
+  }
+  refreshedTokens.set(oldToken, { epoch, accessToken: newToken })
+}
+
+function decodeJwtSubject(token: string | null): string | null {
+  if (!token) return null
+  const parts = token.split('.')
+  if (parts.length !== 3) return null
+  try {
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+    const parsed = JSON.parse(atob(padded)) as { sub?: unknown }
+    return typeof parsed.sub === 'string' && parsed.sub ? parsed.sub : null
+  } catch {
+    return null
+  }
+}
+
+export function isSameTokenSubject(first: string | null, second: string | null): boolean {
+  const firstSub = decodeJwtSubject(first)
+  const secondSub = decodeJwtSubject(second)
+  return Boolean(firstSub && secondSub && firstSub === secondSub)
+}
 
 export function getAccessToken(): string | null {
   if (useMemoryStorage) return memoryToken
@@ -18,19 +99,29 @@ export function getAccessToken(): string | null {
 }
 
 export function setAccessToken(token: string | null): void {
-  memoryToken = token
+  bumpSessionEpoch()
+  writeAccessToken(token)
+}
+
+export function getRefreshToken(): string | null {
+  if (useMemoryRefreshStorage) return memoryRefreshToken
   try {
-    if (token) localStorage.setItem(ACCESS_TOKEN_KEY, token)
-    else localStorage.removeItem(ACCESS_TOKEN_KEY)
-    useMemoryStorage = false
+    memoryRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
   } catch {
-    useMemoryStorage = true
-    // Authentication can still work in memory for the current tab.
+    useMemoryRefreshStorage = true
+    // Keep the current tab usable when browser storage is unavailable.
   }
+  return memoryRefreshToken
+}
+
+export function setRefreshToken(token: string | null): void {
+  writeRefreshToken(token)
 }
 
 export function expireSession(message = 'Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.'): void {
-  setAccessToken(null)
+  bumpSessionEpoch()
+  writeAccessToken(null)
+  writeRefreshToken(null)
   window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT, { detail: { message } }))
 }
 
@@ -44,6 +135,56 @@ export const api = axios.create({
   headers: { Accept: 'application/json' },
 })
 
+const refreshClient = axios.create({
+  baseURL,
+  withCredentials: true,
+  timeout: 15_000,
+  headers: { Accept: 'application/json' },
+})
+
+async function performTokenRefresh(expiredToken: string): Promise<string> {
+  const refreshEpoch = sessionEpoch
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) {
+    throw new Error('Missing refresh token')
+  }
+
+  try {
+    const { data } = await refreshClient.post<RefreshResponsePayload>('/auth/refresh', { refreshToken })
+    if (sessionEpoch !== refreshEpoch) {
+      throw new axios.CanceledError('Session changed while refreshing token')
+    }
+    if (!data?.accessToken || typeof data.accessToken !== 'string') {
+      throw new Error('Invalid refresh response')
+    }
+    writeAccessToken(data.accessToken)
+    if (typeof data.refreshToken === 'string' && data.refreshToken) {
+      writeRefreshToken(data.refreshToken)
+    }
+    rememberRefreshedToken(expiredToken, data.accessToken, refreshEpoch)
+    window.dispatchEvent(new CustomEvent(TOKEN_REFRESHED_EVENT, {
+      detail: {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        user: data.user,
+      },
+    }))
+    return data.accessToken
+  } catch (refreshError) {
+    if (sessionEpoch === refreshEpoch && !axios.isCancel(refreshError)) {
+      if (axios.isAxiosError(refreshError)) {
+        const status = refreshError.response?.status
+        if (status === 400 || status === 401 || status === 403) {
+          expireSession(getApiErrorMessage(refreshError))
+        }
+      } else {
+        expireSession()
+      }
+    }
+    throw refreshError
+  }
+}
+
 // Installed once per module, so StrictMode never adds duplicate interceptors.
 api.interceptors.request.use((config) => {
   const token = getAccessToken()
@@ -53,16 +194,69 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error: unknown) => {
-    if (axios.isAxiosError(error) && error.response?.status === 401) {
-      const authorization = error.config?.headers.get('Authorization')
-      const token = getAccessToken()
-      const isAuthForm = /\/auth\/(login|register|forgot-password|reset-password)\/?$/.test(error.config?.url ?? '')
-      if (token && authorization === `Bearer ${token}` && !isAuthForm) {
-        expireSession(getApiErrorMessage(error))
+  async (error: unknown) => {
+    if (!axios.isAxiosError(error) || error.response?.status !== 401 || !error.config) {
+      return Promise.reject(error)
+    }
+
+    const originalConfig = error.config as RetryableRequestConfig
+    const requestPath = (originalConfig.url ?? '').split('?')[0]
+    const isPublicAuthEndpoint = /\/auth\/(login|register|forgot-password|reset-password|refresh|logout)\/?$/.test(requestPath)
+    if (isPublicAuthEndpoint) {
+      return Promise.reject(error)
+    }
+
+    const authorization = typeof originalConfig.headers?.get === 'function'
+      ? originalConfig.headers.get('Authorization')
+      : undefined
+    const requestToken = typeof authorization === 'string' && authorization.startsWith('Bearer ')
+      ? authorization.slice('Bearer '.length)
+      : null
+
+    if (!requestToken) {
+      return Promise.reject(error)
+    }
+
+    if (!originalConfig._retry) {
+      const refreshed = refreshedTokens.get(requestToken)
+      if (refreshed && refreshed.epoch === sessionEpoch && getAccessToken() === refreshed.accessToken) {
+        if (originalConfig.signal?.aborted) {
+          return Promise.reject(error)
+        }
+        originalConfig._retry = true
+        originalConfig.headers.set('Authorization', `Bearer ${refreshed.accessToken}`)
+        return api(originalConfig)
       }
     }
-    return Promise.reject(error)
+
+    const currentToken = getAccessToken()
+    if (!currentToken || requestToken !== currentToken) {
+      return Promise.reject(error)
+    }
+
+    const refreshToken = getRefreshToken()
+    if (originalConfig._retry || !refreshToken) {
+      expireSession(getApiErrorMessage(error))
+      return Promise.reject(error)
+    }
+
+    if (!refreshPromise) {
+      refreshPromise = performTokenRefresh(requestToken).finally(() => {
+        refreshPromise = null
+      })
+    }
+
+    try {
+      const newAccessToken = await refreshPromise
+      if (originalConfig.signal?.aborted) {
+        return Promise.reject(error)
+      }
+      originalConfig._retry = true
+      originalConfig.headers.set('Authorization', `Bearer ${newAccessToken}`)
+      return api(originalConfig)
+    } catch (refreshError) {
+      return Promise.reject(refreshError)
+    }
   },
 )
 
@@ -92,6 +286,12 @@ const errorTranslations: Record<string, string> = {
   'currentPassword must be a string': 'Mật khẩu hiện tại không hợp lệ.',
   'newPassword must be longer than or equal to 6 characters': 'Mật khẩu mới cần có ít nhất 6 ký tự.',
   'newPassword must be shorter than or equal to 72 bytes': 'Mật khẩu mới không được vượt quá 72 byte.',
+  'Refresh token is required': 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+  'Refresh token must be a string': 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.',
+  'Invalid or expired refresh token': 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+  'Invalid refresh token': 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.',
+  'Refresh token has been revoked': 'Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.',
+  'Refresh token cannot be used as access token': 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.',
 }
 
 export function getApiErrorMessage(error: unknown): string {

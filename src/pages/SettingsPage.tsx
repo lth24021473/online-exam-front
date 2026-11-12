@@ -4,7 +4,7 @@ import { Check, Moon } from 'lucide-react'
 import { useAuth } from '../auth/useAuth'
 import { useTheme } from '../theme/useTheme'
 import { authApi } from '../api/auth.api'
-import { getApiErrorMessage, setAccessToken } from '../api/axios'
+import { getApiErrorMessage, setAccessToken, setRefreshToken } from '../api/axios'
 import { useAutoDismissNotice } from '../hooks/useAutoDismissNotice'
 import './SettingsPage.css'
 
@@ -73,6 +73,7 @@ export default function SettingsPage() {
       })
       if (response.accessToken) {
         setAccessToken(response.accessToken)
+        setRefreshToken(response.refreshToken ?? null)
       }
       setPasswordDraft({
         currentPassword: '',

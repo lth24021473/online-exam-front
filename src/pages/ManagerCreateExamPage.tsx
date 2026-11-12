@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { getAccessToken } from '../api/axios'
+import { getAccessToken, getSessionEpoch } from '../api/axios'
 import { ManagerExamCreation } from '../api/manager-exam-creation'
 import { getManagerErrorMessage } from '../api/manager-exams'
 import ManagerCreateExamForm from '../components/ManagerCreateExamForm'
@@ -28,7 +28,8 @@ export default function ManagerCreateExamPage() {
     setBusy(true)
     setError('')
     const token = getAccessToken()
-    const isActive = () => mounted.current && getAccessToken() === token
+    const epoch = getSessionEpoch()
+    const isActive = () => mounted.current && Boolean(token) && Boolean(getAccessToken()) && getSessionEpoch() === epoch
     try {
       const id = await creation.save(payload, isActive)
       if (isActive()) navigate(`/manage/exams/${id}`, { replace: true, state: { notice: 'Đã tạo đề thi bản nháp.' } })
