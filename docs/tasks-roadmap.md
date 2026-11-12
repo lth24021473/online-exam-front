@@ -14,7 +14,7 @@ Hệ thống được chia thành **3 Giai đoạn (Phases)** theo thứ tự ư
 | **`TASK-01`** | **Khép kín luồng Quên / Đặt lại mật khẩu** | Backend & Frontend | ✅ **Hoàn thành** | SMTP, Token 15p, băm bcrypt, tăng `authVersion`, UI 2 bước |
 | **`CORE-01`** | **Chính sách Quyền Admin: Không xóa User** | Backend & Frontend | ✅ **Hoàn thành** | Đã xóa `DELETE /admin/users/:id` khỏi Swagger, Controller & UI |
 | **`TASK-02`** | **Lưu hồ sơ cá nhân lên Server & Đổi mật khẩu** | Backend & Frontend | ⏳ *Sẵn sàng làm* | `PATCH /users/me`, `POST /auth/change-password` |
-| **`TASK-03`** | **Tự động gia hạn Token (Silent Refresh)** | Backend & Frontend | ⏳ *Chờ xử lý* | Cặp đôi AccessToken/RefreshToken, Axios Interceptor 401 |
+| **`TASK-03`** | **Tự động gia hạn Token (Silent Refresh)** | Backend & Frontend | ✅ **Hoàn thành** | Cặp đôi AccessToken/RefreshToken, Axios Interceptor 401 |
 | **`TASK-04`** | **Worker tự động chốt bài quá hạn (Cron)** | Backend & Frontend | ⏳ *Chờ xử lý* | Cron 10s chốt bài, bỏ vòng lặp `while(true)` kết quả |
 | **`TASK-05`** | **Tách thuật toán Chấm điểm (Strategy Pattern)** | Backend | ⏳ *Chờ xử lý* | `GradingStrategy` linh hoạt cho nhiều dạng câu hỏi |
 | **`TASK-06`** | **Rate Limiting & Health Check Container** | Backend & Frontend | ⏳ *Chờ xử lý* | Throttler chống brute-force, Terminus `/health/live` |
@@ -65,7 +65,7 @@ Hệ thống được chia thành **3 Giai đoạn (Phases)** theo thứ tự ư
     *   Tạo Modal/Form **"Đổi mật khẩu"**: Gồm 3 ô (Mật khẩu hiện tại, Mật khẩu mới, Xác nhận mật khẩu mới) gắn vào tab Chỉnh sửa tài khoản hoặc Cài đặt.
 *   ✅ **Nghiệm thu:** Đổi tên/nơi làm việc ở máy tính A, đăng nhập máy tính B dữ liệu vẫn được lưu nguyên vẹn; đổi được mật khẩu chủ động an toàn.
 
-#### `TASK-03`: Cơ chế Tự động gia hạn Token (Silent Refresh Token)
+#### `TASK-03`: Cơ chế Tự động gia hạn Token (Silent Refresh Token) — [✅ ĐÃ HOÀN THÀNH]
 *   ⚙️ **Backend:**
     *   Sửa API `/auth/login` và `/auth/register`: Cấp cặp đôi `accessToken` (hạn 15 phút) và `refreshToken` (hạn 7 ngày).
     *   Tạo API `POST /api/v1/auth/refresh`: Nhận `refreshToken`, kiểm tra tính hợp lệ và cấp mới `accessToken`.

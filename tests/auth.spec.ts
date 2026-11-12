@@ -3,6 +3,7 @@ import type { Page, Route } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 
 const tokenKey = 'online-exam.access-token'
+const refreshTokenKey = 'online-exam.refresh-token'
 const token = 'mock-access-token'
 const user = {
   id: 'test-student',
@@ -494,4 +495,71 @@ test('profile edit tab contains a link to change password in settings', async ({
   await expect(link).toBeVisible()
   await link.click()
   await expect(page).toHaveURL('/settings#change-password')
+})
+
+test('login saves refreshToken alongside accessToken and logout clears both', async ({ page, api }) => {
+  api.handle('POST /auth/login', reply(200, { ...session, refreshToken: 'mock-refresh-token' }))
+  api.handle('POST /auth/logout', reply(204, null))
+
+  await page.goto('/login')
+  await fillLogin(page)
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click()
+  await expect(page).toHaveURL('/dashboard')
+
+  expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBe(token)
+  expect(await page.evaluate((key) => localStorage.getItem(key), refreshTokenKey)).toBe('mock-refresh-token')
+
+  await page.getByRole('link', { name: 'Cài đặt', exact: true }).click()
+  await page.getByRole('button', { name: 'Đăng xuất tài khoản', exact: true }).click()
+  await expect(page).toHaveURL('/login')
+
+  expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBeNull()
+  expect(await page.evaluate((key) => localStorage.getItem(key), refreshTokenKey)).toBeNull()
+})
+
+test('reloading with an expired access token silently refreshes and restores the session', async ({ page, api }) => {
+  await page.addInitScript(({ ak, rk }) => {
+    localStorage.setItem(ak, 'expired-access-token')
+    localStorage.setItem(rk, 'valid-refresh-token')
+  }, { ak: tokenKey, rk: refreshTokenKey })
+
+  api.handle('GET /users/me', async (route) => {
+    if (route.request().headers().authorization === 'Bearer refreshed-access-token') {
+      await route.fulfill({ json: user })
+      return
+    }
+    await route.fulfill({ status: 401, json: { message: 'Invalid or expired token' } })
+  })
+  api.handle('POST /auth/refresh', reply(200, {
+    accessToken: 'refreshed-access-token',
+    refreshToken: 'rotated-refresh-token',
+    user,
+  }))
+
+  await page.goto('/profile')
+  await expect(page.getByRole('heading', { name: user.fullName })).toBeVisible()
+  await expect(page).toHaveURL('/profile')
+
+  expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBe('refreshed-access-token')
+  expect(await page.evaluate((key) => localStorage.getItem(key), refreshTokenKey)).toBe('rotated-refresh-token')
+  expect(api.calls.filter((call) => call.key === 'POST /auth/refresh')).toEqual([
+    { key: 'POST /auth/refresh', body: { refreshToken: 'valid-refresh-token' }, authorization: undefined },
+  ])
+})
+
+test('expired refresh token during session restore clears both tokens and redirects to login', async ({ page, api }) => {
+  await page.addInitScript(({ ak, rk }) => {
+    localStorage.setItem(ak, 'expired-access-token')
+    localStorage.setItem(rk, 'expired-refresh-token')
+  }, { ak: tokenKey, rk: refreshTokenKey })
+
+  api.handle('GET /users/me', reply(401, { message: 'Invalid or expired token' }))
+  api.handle('POST /auth/refresh', reply(401, { message: 'Invalid or expired refresh token' }))
+
+  await page.goto('/profile')
+  await expect(page).toHaveURL('/login')
+  await expect(page.getByRole('alert')).toHaveText('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')
+
+  expect(await page.evaluate((key) => localStorage.getItem(key), tokenKey)).toBeNull()
+  expect(await page.evaluate((key) => localStorage.getItem(key), refreshTokenKey)).toBeNull()
 })

@@ -84,9 +84,9 @@ export async function loadProfile(signal?: AbortSignal) {
 }
 ```
 
-Client lấy `baseURL` từ `VITE_API_URL`, mặc định `http://localhost:3000/api/v1`, timeout 15 giây và `withCredentials: true`. Token hiện tại được đọc trước mỗi request. Khi API bảo vệ trả `401`, client xóa phiên và router đưa người dùng về đăng nhập; lỗi sai mật khẩu ở login/register không xóa phiên, và lỗi từ request dùng token cũ không xóa token mới.
+Client lấy `baseURL` từ `VITE_API_URL`, mặc định `http://localhost:3000/api/v1`, timeout 15 giây và `withCredentials: true`. Token hiện tại được đọc trước mỗi request. Khi API bảo vệ trả `401`, nếu có `refreshToken` hợp lệ client sẽ tự động gọi ngầm `POST /auth/refresh` (gom các request `401` đồng thời thành một lượt refresh), cập nhật token mới và gửi lại các request cũ; nếu không có `refreshToken` hoặc refresh bị từ chối (`400`/`401`/`403`), client xóa phiên và router đưa người dùng về đăng nhập. Lỗi sai mật khẩu ở login/register/logout không kích hoạt refresh hay xóa phiên, lỗi mạng khi refresh giữ nguyên token để thử lại, và lỗi từ request dùng token cũ không xóa token mới.
 
-Gửi object để Axios tạo JSON, hoặc `FormData` để Axios tạo multipart với boundary phù hợp. Không cần tự đặt `Content-Type`. Client giữ nguyên response Axios và lỗi gốc; dùng `getApiErrorMessage(error)` khi cần hiển thị thông báo tiếng Việt. Backend chưa có refresh-token endpoint nên client không tự gọi refresh hoặc gửi lại request.
+Gửi object để Axios tạo JSON, hoặc `FormData` để Axios tạo multipart với boundary phù hợp. Không cần tự đặt `Content-Type`. Client giữ nguyên response Axios và lỗi gốc; dùng `getApiErrorMessage(error)` khi cần hiển thị thông báo tiếng Việt.
 
 ## Đề thi và làm bài
 

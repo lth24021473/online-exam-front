@@ -565,3 +565,39 @@ test('quiz and result remain usable at small widths and in dark mode', async ({ 
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   await capturePreview(page, 'test-results/preview-attempt-result-dark-mobile.png')
 })
+
+test('expired access token mid-exam silently refreshes and completes saving answers and submitting', async ({ page, api }) => {
+  await openQuiz(page)
+  await page.evaluate(() => localStorage.setItem('online-exam.refresh-token', 'attempt-refresh-token'))
+
+  api.handle(`PUT /attempts/${attemptId}/answers/${questionIds[0]}`, async (route) => {
+    if (route.request().headers().authorization !== 'Bearer refreshed-attempt-token') {
+      await route.fulfill({ status: 401, json: { message: 'Invalid or expired token' } })
+      return
+    }
+    const { selectedOptionIndex } = route.request().postDataJSON() as { selectedOptionIndex: number }
+    api.answers.set(questionIds[0], selectedOptionIndex)
+    await route.fulfill({ json: { questionId: questionIds[0], selectedOptionIndex, savedAt: new Date().toISOString() } })
+  })
+  api.handle('POST /auth/refresh', async (route) => {
+    await route.fulfill({
+      json: {
+        accessToken: 'refreshed-attempt-token',
+        refreshToken: 'rotated-attempt-refresh-token',
+        user,
+      },
+    })
+  })
+
+  await radio(page, 'Boolean').click()
+  await expectSaved(page)
+  await expect(page).toHaveURL(`/exams/${examId}/take`)
+  expect(api.answers.get(questionIds[0])).toBe(1)
+
+  await confirmSubmit(page)
+  await expect(page).toHaveURL(`/attempts/${attemptId}/result`)
+  await expect(page.getByLabel('Điểm bài thi', { exact: true })).toBeVisible()
+  expect(submitCalls(api).at(-1)?.authorization).toBe('Bearer refreshed-attempt-token')
+  expect(await page.evaluate(() => localStorage.getItem('online-exam.access-token'))).toBe('refreshed-attempt-token')
+  expect(await page.evaluate(() => localStorage.getItem('online-exam.refresh-token'))).toBe('rotated-attempt-refresh-token')
+})

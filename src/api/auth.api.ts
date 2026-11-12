@@ -17,6 +17,7 @@ export interface AuthUser {
 
 export interface AuthResponse {
   accessToken: string
+  refreshToken?: string
   user: AuthUser
 }
 
@@ -47,6 +48,7 @@ export interface ChangePasswordPayload {
 export interface ChangePasswordResponse {
   message: string
   accessToken: string
+  refreshToken?: string
 }
 
 export const authApi = {
@@ -64,6 +66,11 @@ export const authApi = {
       email: payload.email.trim().toLowerCase(),
       password: payload.password,
     })
+    return data
+  },
+
+  async refresh(refreshToken: string): Promise<AuthResponse> {
+    const { data } = await api.post<AuthResponse>('/auth/refresh', { refreshToken })
     return data
   },
 
