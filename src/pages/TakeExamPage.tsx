@@ -70,7 +70,9 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
   const isTakingActive =
     state.phase === 'ready' &&
     !expired &&
-    !state.submissionPending
+    !state.submissionPending &&
+    !state.busy &&
+    !state.dialog
 
   const proctoring = useExamProctoring({
     attemptId: session?.attempt.id,
@@ -114,13 +116,13 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
     }
   }, [state.completedId, state.phase, navigate])
 
-  // Automatically exit fullscreen if phase becomes completed or cancelled
+  // Automatically exit fullscreen if phase becomes completed, cancelled, or expired
   useEffect(() => {
-    if (state.phase === 'completed' || state.phase === 'cancelled') {
+    if (state.phase === 'completed' || state.phase === 'cancelled' || expired) {
       exitFullscreenHelper()
       document.body.classList.remove('exam-taking-fullscreen')
     }
-  }, [state.phase])
+  }, [state.phase, expired])
 
   // Cleanup on unmount (e.g. user leaves page or browser navigates)
   useEffect(() => {
@@ -242,7 +244,7 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
               <legend id="current-question-title">Câu {Math.min(questionIndex + 1, questions.length)}. {current.content}</legend>
               {current.options.map((option, index) => <label key={`${current.id}:${index}`} className={`exam-option${state.selections[current.id] === index ? ' exam-option-selected' : ''}`}><input type="radio" name={`question-${current.id}`} value={index} checked={state.selections[current.id] === index} onChange={() => controller.select(current.id, index)} /><span className="exam-option-letter" aria-hidden="true">{String.fromCharCode(65 + index)}</span><span><span className="sr-only">{String.fromCharCode(65 + index)}. </span>{option}</span></label>)}
             </fieldset>
-            <div className="exam-question-pagination"><button className="button button-inline exam-button-secondary" disabled={questionIndex <= 0} onClick={() => setQuestionIndex((index) => Math.max(0, index - 1))}>Câu trước</button><button className="button button-primary button-inline" disabled={questionIndex >= questions.length - 1} onClick={() => setQuestionIndex((index) => Math.min(questions.length - 1, index + 1))}>Câu tiếp theo</button></div>
+            <div className="exam-question-pagination"><button className="button button-inline exam-button-secondary" disabled={locked || questionIndex <= 0} onClick={() => setQuestionIndex((index) => Math.max(0, index - 1))}>Câu trước</button><button className="button button-primary button-inline" disabled={locked || questionIndex >= questions.length - 1} onClick={() => setQuestionIndex((index) => Math.min(questions.length - 1, index + 1))}>Câu tiếp theo</button></div>
           </> : <p>Đề thi chưa có câu hỏi.</p>}
         </section>
         <aside className="exam-panel exam-attempt-sidebar" aria-label="Tiến độ làm bài">
@@ -253,10 +255,10 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
           </div>
           <progress className="sr-only" value={answeredCount} max={Math.max(1, questions.length)} aria-label="Số câu đã chọn" />
           <div className="exam-question-nav-scroll">
-            <nav className="exam-question-nav" aria-label="Chọn câu hỏi">{questions.map((question, index) => <button key={question.id} className={[index === questionIndex ? 'is-current' : '', state.selections[question.id] !== undefined ? 'is-answered' : '', reviewMarks.includes(question.id) ? 'is-review' : ''].filter(Boolean).join(' ')} aria-label={`Câu ${index + 1}${state.selections[question.id] !== undefined ? ', đã chọn' : ', chưa chọn'}${reviewMarks.includes(question.id) ? ', cần kiểm tra lại' : ''}`} aria-current={index === questionIndex ? 'step' : undefined} onClick={() => setQuestionIndex(index)}>{index + 1}</button>)}</nav>
+            <nav className="exam-question-nav" aria-label="Chọn câu hỏi">{questions.map((question, index) => <button key={question.id} disabled={locked} className={[index === questionIndex ? 'is-current' : '', state.selections[question.id] !== undefined ? 'is-answered' : '', reviewMarks.includes(question.id) ? 'is-review' : ''].filter(Boolean).join(' ')} aria-label={`Câu ${index + 1}${state.selections[question.id] !== undefined ? ', đã chọn' : ', chưa chọn'}${reviewMarks.includes(question.id) ? ', cần kiểm tra lại' : ''}`} aria-current={index === questionIndex ? 'step' : undefined} onClick={() => setQuestionIndex(index)}>{index + 1}</button>)}</nav>
           </div>
           <div className="exam-sidebar-submit">
-            {state.submissionPending || expired ? <button className="button button-primary button-inline" onClick={controller.retrySubmit} disabled={Boolean(state.busy)}>{state.busy === 'submit' ? 'Đang nộp bài…' : 'Kiểm tra và nộp lại'}</button> : <button className="button button-primary button-inline" onClick={(event) => { dialogTriggerRef.current = event.currentTarget; controller.openSubmit() }} disabled={Boolean(state.busy)}>Nộp bài</button>}
+            {state.submissionPending || expired ? <button className="button button-primary button-inline" onClick={controller.retrySubmit} disabled={Boolean(state.busy || expired)}>{state.busy === 'submit' ? 'Đang nộp bài…' : 'Kiểm tra và nộp lại'}</button> : <button className="button button-primary button-inline" onClick={(event) => { dialogTriggerRef.current = event.currentTarget; controller.openSubmit() }} disabled={Boolean(state.busy)}>Nộp bài</button>}
           </div>
           <ul className="exam-question-legend" aria-label="Trạng thái câu hỏi">
             <li><span className="exam-legend-dot is-answered" aria-hidden="true" />Câu đã làm</li>
@@ -271,10 +273,49 @@ function AttemptWorkspace({ userId, examId }: { userId: string; examId: string }
           </div>
         </aside>
       </div>
-      {state.dialog && <div className="exam-dialog-backdrop"><section ref={dialogRef} className="exam-panel exam-confirm" role="dialog" aria-modal="true" aria-labelledby="attempt-confirm-title"><h2 id="attempt-confirm-title">{state.dialog === 'submit' ? 'Nộp bài thi?' : 'Hủy lượt thi?'}</h2><p>{state.dialog === 'submit' ? `Bạn đã chọn ${answeredCount}/${questions.length} câu. Sau khi nộp, bạn không thể đổi đáp án.` : 'Lượt thi này sẽ kết thúc và không được chấm điểm. Bạn có thể bắt đầu lượt mới sau đó.'}</p>{state.dialog === 'submit' && state.pendingCount > 0 && <p className="exam-muted">Hệ thống sẽ lưu {state.pendingCount} đáp án đang chờ trước khi nộp.</p>}<div className="exam-actions"><button autoFocus className="button button-inline exam-button-secondary" onClick={controller.closeDialog} disabled={Boolean(state.busy)}>Tiếp tục làm bài</button><button className="button button-primary button-inline" onClick={async () => { exitFullscreenHelper(); document.body.classList.remove('exam-taking-fullscreen'); if (state.dialog === 'submit') { await controller.confirmSubmit() } else { await controller.confirmCancel() } }} disabled={Boolean(state.busy)}>{state.busy === 'cancel' ? 'Đang hủy bài…' : state.dialog === 'submit' ? 'Xác nhận nộp bài' : 'Xác nhận hủy bài'}</button></div></section></div>}
+      {!expired && state.dialog && <div className="exam-dialog-backdrop"><section ref={dialogRef} className="exam-panel exam-confirm" role="dialog" aria-modal="true" aria-labelledby="attempt-confirm-title"><h2 id="attempt-confirm-title">{state.dialog === 'submit' ? 'Nộp bài thi?' : 'Hủy lượt thi?'}</h2><p>{state.dialog === 'submit' ? `Bạn đã chọn ${answeredCount}/${questions.length} câu. Sau khi nộp, bạn không thể đổi đáp án.` : 'Lượt thi này sẽ kết thúc và không được chấm điểm. Bạn có thể bắt đầu lượt mới sau đó.'}</p>{state.dialog === 'submit' && state.pendingCount > 0 && <p className="exam-muted">Hệ thống sẽ lưu {state.pendingCount} đáp án đang chờ trước khi nộp.</p>}<div className="exam-actions"><button autoFocus className="button button-inline exam-button-secondary" onClick={controller.closeDialog} disabled={Boolean(state.busy)}>Tiếp tục làm bài</button><button className="button button-primary button-inline" onClick={async () => { exitFullscreenHelper(); document.body.classList.remove('exam-taking-fullscreen'); if (state.dialog === 'submit') { await controller.confirmSubmit() } else { await controller.confirmCancel() } }} disabled={Boolean(state.busy)}>{state.busy === 'cancel' ? 'Đang hủy bài…' : state.dialog === 'submit' ? 'Xác nhận nộp bài' : 'Xác nhận hủy bài'}</button></div></section></div>}
+      {expired && (
+        <div className="exam-dialog-backdrop exam-timeout-dialog-backdrop" role="region" aria-label="Thông báo hết giờ">
+          <section
+            className="exam-panel exam-confirm exam-timeout-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="exam-timeout-title"
+            aria-describedby="exam-timeout-desc"
+          >
+            <div className="exam-timeout-header">
+              <span className="exam-timeout-badge">HẾT GIỜ</span>
+              <h2 id="exam-timeout-title">ĐÃ HẾT THỜI GIAN LÀM BÀI</h2>
+            </div>
+            <p id="exam-timeout-desc" className="exam-timeout-message">
+              Đã hết giờ làm bài! Hệ thống đang tự động thu bài và tính điểm...
+            </p>
+            <div className="exam-timeout-status" role="status">
+              <LoaderCircle className="exam-spin" size={24} aria-hidden="true" />
+              <span>
+                {state.online
+                  ? 'Hệ thống đang tự động thu bài và tính điểm, vui lòng chờ trong giây lát…'
+                  : 'Mất kết nối mạng. Bài thi sẽ tự động được thu và chấm điểm ngay khi kết nối trở lại.'}
+              </span>
+            </div>
+            {!state.online && (
+              <div className="exam-actions exam-actions-center">
+                <button
+                  type="button"
+                  className="button button-primary button-inline"
+                  onClick={controller.retrySubmit}
+                  disabled={Boolean(state.busy)}
+                >
+                  Thử kết nối lại
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
       <ProctoringWarningModal
-        isOpen={proctoring.isWarningOpen}
-        isTerminated={proctoring.isTerminated}
+        isOpen={!expired && proctoring.isWarningOpen}
+        isTerminated={!expired && proctoring.isTerminated}
         violation={proctoring.latestViolation}
         maxViolations={session.exam.maxViolations ?? 3}
         onDismiss={async () => {

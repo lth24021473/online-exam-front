@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import axios from 'axios';
 
 test('Hai trình duyệt (Chrome và Edge) đồng bộ hồ sơ, tên, nơi ở, nơi làm việc và ảnh đại diện thời gian thực qua MongoDB backend', async ({ browser }) => {
+  test.skip(process.env.REAL_API_E2E !== '1', 'Chỉ chạy khi có backend API thật ở cổng 3000');
   const email = `sync-${Date.now()}@example.com`;
   const password = 'Password123!';
   const initialName = 'Học Viên Thử Nghiệm';

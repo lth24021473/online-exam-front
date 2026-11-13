@@ -160,6 +160,15 @@
 .exam-dialog-backdrop .exam-confirm { width: min(540px, 100%); background: var(--surface); max-height: calc(100svh / var(--ui-scale) - 48px); overflow-y: auto; border: 2px solid var(--border); box-shadow: 6px 6px 0px 0px var(--border); }
 .exam-loading, .exam-empty { display: grid; place-items: center; text-align: center; padding: 44px; }
 .exam-spin { animation: spin .8s linear infinite; }
+.exam-timeout-dialog-backdrop { z-index: 1060; background: rgba(15, 23, 42, 0.75); }
+.exam-timeout-modal { width: min(540px, 92%); text-align: center; border: 3px solid #1a1a1a; box-shadow: 6px 6px 0px 0px #1a1a1a; padding: 32px 24px; }
+:root[data-theme='dark'] .exam-timeout-modal { border-color: #ffcc00; box-shadow: 6px 6px 0px 0px #ffcc00; }
+.exam-timeout-header { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-bottom: 16px; }
+.exam-timeout-badge { display: inline-block; background: #e63b2e; color: #ffffff; font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; padding: 4px 10px; border: 2px solid #1a1a1a; box-shadow: 2px 2px 0px 0px #1a1a1a; }
+.exam-timeout-modal h2 { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 900; text-transform: uppercase; margin: 0; color: var(--text-primary); }
+.exam-timeout-message { font-size: 16px; font-weight: 600; color: var(--text-primary); line-height: 1.6; margin: 0 0 20px; }
+.exam-timeout-status { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 14px 16px; background: var(--surface-muted); border: 2px solid var(--border); border-radius: 2px; font-size: 14px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+.exam-timeout-status svg { color: var(--accent); flex-shrink: 0; }
 
 @media (max-width: 850px) {
   .exam-workspace { grid-template-columns: 1fr; }

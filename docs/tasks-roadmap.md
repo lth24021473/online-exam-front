@@ -13,9 +13,9 @@ Hệ thống được chia thành **3 Giai đoạn (Phases)** theo thứ tự ư
 | :--- | :--- | :--- | :---: | :--- |
 | **`TASK-01`** | **Khép kín luồng Quên / Đặt lại mật khẩu** | Backend & Frontend | ✅ **Hoàn thành** | SMTP, Token 15p, băm bcrypt, tăng `authVersion`, UI 2 bước |
 | **`CORE-01`** | **Chính sách Quyền Admin: Không xóa User** | Backend & Frontend | ✅ **Hoàn thành** | Đã xóa `DELETE /admin/users/:id` khỏi Swagger, Controller & UI |
-| **`TASK-02`** | **Lưu hồ sơ cá nhân lên Server & Đổi mật khẩu** | Backend & Frontend | ⏳ *Sẵn sàng làm* | `PATCH /users/me`, `POST /auth/change-password` |
+| **`TASK-02`** | **Lưu hồ sơ cá nhân lên Server & Đổi mật khẩu** | Backend & Frontend | ✅ **Hoàn thành** | `PATCH /users/me`, `POST /auth/change-password` |
 | **`TASK-03`** | **Tự động gia hạn Token (Silent Refresh)** | Backend & Frontend | ✅ **Hoàn thành** | Cặp đôi AccessToken/RefreshToken, Axios Interceptor 401 |
-| **`TASK-04`** | **Worker tự động chốt bài quá hạn (Cron)** | Backend & Frontend | ⏳ *Chờ xử lý* | Cron 10s chốt bài, bỏ vòng lặp `while(true)` kết quả |
+| **`TASK-04`** | **Worker tự động chốt bài quá hạn (Cron)** | Backend & Frontend | ✅ **Hoàn thành** | Cron 10s chốt bài, popup hết giờ tự thu bài & chuyển hướng kết quả |
 | **`TASK-05`** | **Tách thuật toán Chấm điểm (Strategy Pattern)** | Backend | ⏳ *Chờ xử lý* | `GradingStrategy` linh hoạt cho nhiều dạng câu hỏi |
 | **`TASK-06`** | **Rate Limiting & Health Check Container** | Backend & Frontend | ⏳ *Chờ xử lý* | Throttler chống brute-force, Terminus `/health/live` |
 | **`TASK-07`** | **Xáo trộn Đề thi và Đáp án (Shuffle Anti-cheat)** | Backend & Frontend | ⏳ *Chờ xử lý* | Random permutation mapping cho từng học sinh |
@@ -78,7 +78,7 @@ Hệ thống được chia thành **3 Giai đoạn (Phases)** theo thứ tự ư
 
 ### 📌 MODULE 2: HẠ TẦNG THI & CHỐNG NGHẼN (EXAM CORE & RESILIENCY)
 
-#### `TASK-04`: Tiến trình Worker tự động chốt bài thi quá hạn (Background Auto-finalizer)
+#### `TASK-04`: Tiến trình Worker tự động chốt bài thi quá hạn (Background Auto-finalizer) — [✅ ĐÃ HOÀN THÀNH]
 *   ⚙️ **Backend:**
     *   Cài đặt `@nestjs/schedule` và kích hoạt trong `AppModule`.
     *   Tạo service `AttemptSchedulerService` chạy Cron định kỳ mỗi 10 giây (`@Cron('*/10 * * * * *')`).
@@ -86,7 +86,7 @@ Hệ thống được chia thành **3 Giai đoạn (Phases)** theo thứ tự ư
     *   **Loại bỏ hoàn toàn** vòng lặp `while(true)` chốt lười trong API `GET /exams/:id/results`.
 *   🎨 **Frontend:**
     *   Tại `src/pages/TakeExamPage.tsx`: Khi đồng hồ đếm ngược về `00:00:00`, khóa toàn bộ tương tác, hiển thị popup: *"Đã hết giờ làm bài! Hệ thống đang tự động thu bài và tính điểm..."*, sau đó tự động chuyển hướng sang trang kết quả `/attempts/:id/result`.
-*   ✅ **Nghiệm thu:** Học sinh tắt máy/mất mạng khi hết giờ thì bài thi vẫn tự động được chấm trên server đúng từng giây.
+*   ✅ **Nghiệm thu:** Học sinh tắt máy/mất mạng khi hết giờ thì bài thi vẫn tự động được chấm trên server đúng từng giây; Frontend tự động khóa làm bài, hiển thị popup thu bài và chuyển hướng sang trang kết quả; 25/25 tests attempts pass.
 
 #### `TASK-05`: Tách thuật toán Chấm điểm (Strategy Pattern)
 *   ⚙️ **Backend:**
