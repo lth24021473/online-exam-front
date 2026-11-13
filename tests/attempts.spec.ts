@@ -109,6 +109,13 @@ const test = base.extend<{ api: ApiMock }>({
         await route.fulfill({ status: 204 })
         return
       }
+      if (key.includes('/violations')) {
+        await route.fulfill({ json: {
+          violation: { id: 'mock-violation', attemptId, type: 'FULLSCREEN_EXIT', detail: null, createdAt: new Date().toISOString() },
+          violationCount: 0, maxViolations: 3, terminated: false, submitted: false, result: null,
+        } })
+        return
+      }
       if (key === 'GET /attempts') {
         const requestedStatus = url.searchParams.get('status')
         const items = (api.history ?? (starts ? [historyItem()] : [])).filter((item) => !requestedStatus || item.status === requestedStatus)
@@ -157,7 +164,7 @@ test('catalog and details lead to a real attempt shape using the current bearer 
   await page.getByRole('link', { name: 'Xem đề thi', exact: true }).click()
   await expect(page).toHaveURL(`/exams/${examId}`)
   await expect(page.getByText(exam.instructions, { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Bắt đầu / Tiếp tục bài', exact: true }).click()
+  await page.locator('button, a').filter({ hasText: 'Bắt đầu / Tiếp tục bài' }).first().click()
   await expect(page).toHaveURL(`/exams/${examId}/take`)
   await expect(radio(page, 'Boolean')).toBeVisible()
   expect(api.calls.filter((call) => call.key.includes('/attempts')).every((call) => call.authorization === `Bearer ${token}`)).toBe(true)
@@ -342,6 +349,43 @@ test('a deadline reached offline locks answers and submits as soon as connectivi
   await context.setOffline(false)
   await expect(page).toHaveURL(`/attempts/${attemptId}/result`)
   expect(submitCalls(api)).toHaveLength(1)
+})
+
+test('when timer reaches 00:00:00, locks all interactions and shows auto-submit popup before redirecting to result', async ({ page, api }) => {
+  api.resultScore = 9.0
+  let releaseSubmit: () => void = () => {}
+  const pendingSubmit = new Promise<void>((resolve) => { releaseSubmit = resolve })
+  api.handle(`POST /attempts/${attemptId}/submit`, async (route) => {
+    await pendingSubmit
+    api.submitted = true
+    await route.fulfill({ json: {
+      attempt: { id: attemptId, examId, examTitle: exam.title, status: 'SUBMITTED', startedAt: new Date().toISOString(), deadlineAt: api.deadlineAt, submittedAt: new Date().toISOString() },
+      summary: { score: 9.0, maxScore: 10, totalQuestions: 2, correctCount: 2, incorrectCount: 0, unansweredCount: 0 },
+      questions: questions.map((q) => ({ ...q, selectedOptionIndex: 1, correctOptionIndex: 1, isCorrect: true })),
+    } })
+  })
+
+  const now = new Date('2026-10-04T10:00:00.000Z')
+  api.deadlineAt = new Date(now.getTime() + 60_000).toISOString()
+  await page.clock.install({ time: now })
+  await openQuiz(page)
+
+  await expect(radio(page, 'Boolean')).toBeEnabled()
+
+  await page.clock.fastForward(61_000)
+
+  await expect(radio(page, 'Boolean')).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Câu tiếp theo' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Đánh dấu xem lại' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Hủy bài' })).toBeDisabled()
+
+  const popup = page.locator('.exam-timeout-modal')
+  await expect(popup).toBeVisible()
+  await expect(popup).toContainText('Đã hết giờ làm bài! Hệ thống đang tự động thu bài và tính điểm...')
+
+  releaseSubmit()
+  await expect(page).toHaveURL(`/attempts/${attemptId}/result`)
+  await expect(page.getByLabel('Điểm bài thi', { exact: true })).toContainText(/9\s*\/\s*10/)
 })
 
 test('manual submit waits for save and prevents another request while submission is pending', async ({ page, api }) => {
