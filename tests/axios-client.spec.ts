@@ -382,3 +382,25 @@ test('401 on /auth/logout does not trigger /auth/refresh', async ({ page, mockAp
   expect(result).toEqual({ status: 401, expired: 0 })
   expect(mockApi.calls).toHaveLength(1)
 })
+
+test('429 Too Many Requests translates to Vietnamese rate limit notice', async ({ page, mockApi }) => {
+  mockApi.handle('GET /client-throttled', async (route) => {
+    await route.fulfill({
+      status: 429,
+      json: { statusCode: 429, message: 'ThrottlerException: Too Many Requests' },
+    })
+  })
+
+  const message = await page.evaluate(async () => {
+    const modulePath = '/src/api/axios.ts'
+    const { api, getApiErrorMessage } = await import(modulePath)
+    try {
+      await api.get('/client-throttled')
+      return null
+    } catch (err: unknown) {
+      return getApiErrorMessage(err)
+    }
+  })
+
+  expect(message).toBe('Bạn đang thao tác quá nhanh, vui lòng thử lại sau vài giây!')
+})
