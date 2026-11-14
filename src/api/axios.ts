@@ -292,6 +292,8 @@ const errorTranslations: Record<string, string> = {
   'Invalid refresh token': 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.',
   'Refresh token has been revoked': 'Phiên đăng nhập đã kết thúc. Vui lòng đăng nhập lại.',
   'Refresh token cannot be used as access token': 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.',
+  'ThrottlerException: Too Many Requests': 'Bạn đang thao tác quá nhanh, vui lòng thử lại sau vài giây!',
+  'Too Many Requests': 'Bạn đang thao tác quá nhanh, vui lòng thử lại sau vài giây!',
 }
 
 export function getApiErrorMessage(error: unknown): string {
@@ -325,7 +327,7 @@ export function getApiErrorMessage(error: unknown): string {
     case 409:
       return 'Thông tin này đã được sử dụng. Vui lòng kiểm tra lại.'
     case 429:
-      return 'Bạn thao tác quá nhanh. Vui lòng thử lại sau ít phút.'
+      return 'Bạn đang thao tác quá nhanh, vui lòng thử lại sau vài giây!'
     default:
       return 'Máy chủ đang gặp sự cố. Vui lòng thử lại sau.'
   }
